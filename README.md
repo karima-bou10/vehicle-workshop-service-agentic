@@ -1,1 +1,1 @@
-# vehicle-workshop-service-AI
+# vehicle-workshop-service-agentic
