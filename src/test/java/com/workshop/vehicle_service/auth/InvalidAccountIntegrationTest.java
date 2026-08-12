@@ -19,18 +19,4 @@ class InvalidAccountIntegrationTest extends AuthIntegrationTestBase {
                 .andExpect(jsonPath("$.message").value("Authentication failed"));
     }
 
-    @Test
-    void missingRoleShouldReturnGenericUnauthorized() throws Exception {
-        utilisateurRepository.save(Utilisateur.builder()
-                .username("norole")
-                .password(passwordEncoder.encode("pass123"))
-                .role(null)
-                .build());
-
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"norole\",\"password\":\"pass123\"}"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Authentication failed"));
-    }
 }

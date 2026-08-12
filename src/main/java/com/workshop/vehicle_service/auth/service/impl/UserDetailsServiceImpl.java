@@ -1,7 +1,8 @@
-package com.workshop.vehicle_service.auth.service;
+package com.workshop.vehicle_service.auth.service.impl;
 
 import com.workshop.vehicle_service.auth.entity.Utilisateur;
 import com.workshop.vehicle_service.auth.repository.UtilisateurRepository;
+import com.workshop.vehicle_service.auth.service.InvalidCredentialsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
