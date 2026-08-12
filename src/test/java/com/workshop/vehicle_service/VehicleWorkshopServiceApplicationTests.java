@@ -1,9 +1,11 @@
-package com.workshop.vehicleService.vehicle_workshop_service;
+package com.workshop.vehicle_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class VehicleWorkshopServiceApplicationTests {
 
 	@Test

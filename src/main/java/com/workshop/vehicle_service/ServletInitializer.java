@@ -1,4 +1,4 @@
-package com.workshop.vehicleService.vehicle_workshop_service;
+package com.workshop.vehicle_service;
 
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
