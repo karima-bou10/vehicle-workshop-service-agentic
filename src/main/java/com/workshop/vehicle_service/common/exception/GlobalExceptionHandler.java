@@ -16,7 +16,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex,
+            HttpServletRequest request) {
         String message = ex.getBindingResult().getFieldErrors()
                 .stream()
                 .map(FieldError::getDefaultMessage)
@@ -25,13 +26,68 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(DateRestitutionInvalideException.class)
+    public ResponseEntity<ApiErrorResponse> handleDateRestitutionInvalide(DateRestitutionInvalideException ex,
+            HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ApiErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleBadCredentials(BadCredentialsException ex,
+            HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, "Authentication failed", request.getRequestURI());
+    }
+
+    @ExceptionHandler({ VehiculeIntrouvableException.class, InterventionIntrouvableException.class })
+    public ResponseEntity<ApiErrorResponse> handleNotFound(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(VehiculeInactifException.class)
+    public ResponseEntity<ApiErrorResponse> handleVehiculeInactif(VehiculeInactifException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(InterventionInactiveException.class)
+    public ResponseEntity<ApiErrorResponse> handleInterventionInactive(InterventionInactiveException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler({ TransitionIllegaleException.class, CoutEstimeManquantException.class,
+            MecanicienNonAffecteException.class })
+    public ResponseEntity<ApiErrorResponse> handleWorkflowBadRequest(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(RestitutionNonAutoriseeException.class)
+    public ResponseEntity<ApiErrorResponse> handleRestitutionForbidden(RestitutionNonAutoriseeException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(MecanicienInactifException.class)
+    public ResponseEntity<ApiErrorResponse> handleMecanicienInactif(MecanicienInactifException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(MecanicienIntrouvableException.class)
+    public ResponseEntity<ApiErrorResponse> handleMecanicienIntrouvable(MecanicienIntrouvableException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(Exception.class)
@@ -45,8 +101,7 @@ public class GlobalExceptionHandler {
                 status.value(),
                 status.getReasonPhrase(),
                 message,
-                path
-        );
+                path);
         return ResponseEntity.status(status).body(body);
     }
 }

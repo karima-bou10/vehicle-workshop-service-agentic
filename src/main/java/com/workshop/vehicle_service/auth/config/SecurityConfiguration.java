@@ -2,7 +2,7 @@ package com.workshop.vehicle_service.auth.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.workshop.vehicle_service.auth.filter.JwtAuthenticationFilter;
-import com.workshop.vehicle_service.auth.service.UserDetailsServiceImpl;
+import com.workshop.vehicle_service.auth.service.impl.UserDetailsServiceImpl;
 import com.workshop.vehicle_service.common.exception.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -42,14 +42,14 @@ public class SecurityConfiguration {
                 .authenticationProvider(authenticationProvider())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(this::writeUnauthorized)
-                        .accessDeniedHandler(this::writeForbidden)
-                )
+                        .accessDeniedHandler(this::writeForbidden))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health").permitAll()
+                        .requestMatchers("/api/auth/login", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
+                                "/actuator/health")
+                        .permitAll()
                         .requestMatchers("/api/auth/manager/**").hasRole("MANAGER")
                         .requestMatchers("/api/auth/me").authenticated()
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
@@ -72,22 +72,24 @@ public class SecurityConfiguration {
         return config.getAuthenticationManager();
     }
 
-    private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response, Exception ex) throws IOException {
+    private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response, Exception ex)
+            throws IOException {
         writeError(request, response, HttpStatus.UNAUTHORIZED, "Authentication failed");
     }
 
-    private void writeForbidden(HttpServletRequest request, HttpServletResponse response, Exception ex) throws IOException {
+    private void writeForbidden(HttpServletRequest request, HttpServletResponse response, Exception ex)
+            throws IOException {
         writeError(request, response, HttpStatus.FORBIDDEN, "Access denied");
     }
 
-    private void writeError(HttpServletRequest request, HttpServletResponse response, HttpStatus status, String message) throws IOException {
+    private void writeError(HttpServletRequest request, HttpServletResponse response, HttpStatus status, String message)
+            throws IOException {
         ApiErrorResponse body = new ApiErrorResponse(
                 Instant.now(),
                 status.value(),
                 status.getReasonPhrase(),
                 message,
-                request.getRequestURI()
-        );
+                request.getRequestURI());
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(), body);
