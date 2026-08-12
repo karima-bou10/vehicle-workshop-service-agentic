@@ -1,4 +1,4 @@
-package com.workshop.vehicleService.vehicle_workshop_service;
+package com.workshop.vehicle_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
