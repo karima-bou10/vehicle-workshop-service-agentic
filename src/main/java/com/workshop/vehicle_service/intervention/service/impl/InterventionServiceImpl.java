@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class InterventionServiceImpl implements InterventionService {
+public class InterventionServiceImpl implements InterventionService  {
 
     private final InterventionRepository interventionRepository;
     private final VehiculeService vehiculeService;
@@ -128,5 +128,7 @@ public class InterventionServiceImpl implements InterventionService {
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
             throw new IllegalArgumentException("Paramètres de pagination invalides");
         }
+
+
     }
 }
