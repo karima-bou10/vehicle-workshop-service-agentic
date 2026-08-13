@@ -1,6 +1,10 @@
 package com.workshop.vehicle_service.vehicule.service;
 
+import com.workshop.vehicle_service.vehicule.dto.VehiculeRequest;
+import com.workshop.vehicle_service.vehicule.dto.VehiculeResponse;
 import com.workshop.vehicle_service.vehicule.entity.Vehicule;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Point d'entrée public du module vehicule (ADR-001) — seul moyen pour un autre
@@ -27,4 +31,15 @@ public interface VehiculeService {
      *                                                                                    false
      */
     Vehicule findActifById(Long id);
+
+
+    Page<VehiculeResponse> getAllVehicules(String search, Pageable pageable);
+
+    VehiculeResponse getVehiculeById(Long id);
+
+    VehiculeResponse createVehicule(VehiculeRequest request);
+
+    VehiculeResponse updateVehicule(Long id, VehiculeRequest request);
+
+    Void deleteVehicule(Long id);
 }
