@@ -1,5 +1,6 @@
 package com.workshop.vehicle_service.intervention.service.impl;
 
+import com.workshop.vehicle_service.common.dto.JourCompte;
 import com.workshop.vehicle_service.common.exception.DateRestitutionInvalideException;
 import com.workshop.vehicle_service.common.exception.InterventionInactiveException;
 import com.workshop.vehicle_service.common.exception.InterventionIntrouvableException;
@@ -8,13 +9,19 @@ import com.workshop.vehicle_service.intervention.dto.InterventionResponse;
 import com.workshop.vehicle_service.intervention.dto.InterventionUpdateRequest;
 import com.workshop.vehicle_service.intervention.entity.Intervention;
 import com.workshop.vehicle_service.intervention.enums.StatutIntervention;
+import com.workshop.vehicle_service.intervention.enums.TypeIntervention;
 import com.workshop.vehicle_service.intervention.mapper.InterventionMapper;
 import com.workshop.vehicle_service.intervention.repository.InterventionRepository;
 import com.workshop.vehicle_service.intervention.service.InterventionNumeroGenerator;
 import com.workshop.vehicle_service.intervention.service.InterventionService;
 import com.workshop.vehicle_service.vehicule.entity.Vehicule;
 import com.workshop.vehicle_service.vehicule.service.VehiculeService;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +32,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class InterventionServiceImpl implements InterventionService  {
+
+    /** Statuts considérés comme "clôturés" pour la charge active d'un mécanicien. */
+    private static final List<StatutIntervention> STATUTS_CLOTURES = List.of(
+            StatutIntervention.TERMINEE, StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
+
+    /** Statuts jamais considérés en retard, même si la date de restitution prévue est dépassée. */
+    private static final List<StatutIntervention> STATUTS_EXCLUS_RETARD = List.of(
+            StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
 
     private final InterventionRepository interventionRepository;
     private final VehiculeService vehiculeService;
@@ -109,6 +124,77 @@ public class InterventionServiceImpl implements InterventionService  {
                         sourceIntervention.getId(),
                         pageable)
                 .map(interventionMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countRecuesAujourdHui() {
+        LocalDateTime debut = LocalDate.now().atStartOfDay();
+        LocalDateTime fin = debut.plusDays(1);
+        return interventionRepository.countByActifTrueAndDateDepotGreaterThanEqualAndDateDepotLessThan(debut, fin);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countEnStatut(StatutIntervention statut) {
+        return interventionRepository.countByActifTrueAndStatut(statut);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countRetards() {
+        return interventionRepository.countByActifTrueAndDateRestitutionPrevueBeforeAndStatutNotIn(
+                LocalDateTime.now(), STATUTS_EXCLUS_RETARD);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<InterventionResponse> findRetards(Pageable pageable) {
+        validatePageable(pageable);
+        return interventionRepository
+                .findByActifTrueAndDateRestitutionPrevueBeforeAndStatutNotIn(LocalDateTime.now(),
+                        STATUTS_EXCLUS_RETARD, pageable)
+                .map(interventionMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<StatutIntervention, Long> countParStatut() {
+        return interventionRepository.countActifsGroupeParStatut().stream()
+                .collect(Collectors.toMap(InterventionRepository.StatutCount::getStatut,
+                        InterventionRepository.StatutCount::getTotal));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<TypeIntervention, Long> countParType() {
+        return interventionRepository.countActifsGroupeParType().stream()
+                .collect(Collectors.toMap(InterventionRepository.TypeCount::getType,
+                        InterventionRepository.TypeCount::getTotal));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, Long> chargeActiveParMecanicien() {
+        return interventionRepository.chargeActiveParMecanicien(STATUTS_CLOTURES).stream()
+                .collect(Collectors.toMap(InterventionRepository.MecanicienCharge::getMecanicienId,
+                        InterventionRepository.MecanicienCharge::getTotal));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<JourCompte> volumeRecuesParJour(LocalDate debut, LocalDate finInclusive) {
+        LocalDateTime debutDateTime = debut.atStartOfDay();
+        LocalDateTime finExclusiveDateTime = finInclusive.plusDays(1).atStartOfDay();
+        Map<LocalDate, Long> parJour = interventionRepository
+                .findDateDepotDansPeriode(debutDateTime, finExclusiveDateTime).stream()
+                .collect(Collectors.groupingBy(LocalDateTime::toLocalDate, Collectors.counting()));
+
+        List<JourCompte> serie = new ArrayList<>();
+        for (LocalDate jour = debut; !jour.isAfter(finInclusive); jour = jour.plusDays(1)) {
+            serie.add(new JourCompte(jour, parJour.getOrDefault(jour, 0L)));
+        }
+        return serie;
     }
 
     private Intervention getEntityByNumero(String numero) {
