@@ -11,10 +11,8 @@ import java.time.LocalDateTime;
  * vehiculeId/numero/statut/mecanicienId/coutEstime/dateCloture/actif.
  */
 public record InterventionUpdateRequest(
-        @NotNull TypeIntervention type,
-        @NotBlank String descriptionClient,
-        String diagnostic,
-        @NotNull PrioriteIntervention priorite,
-        @NotNull LocalDateTime dateDepot,
-        LocalDateTime dateRestitutionPrevue) {
+                @NotNull TypeIntervention type,
+                @NotBlank String descriptionClient,
+                @NotNull PrioriteIntervention priorite,
+                @NotNull LocalDateTime dateDepot) {
 }
