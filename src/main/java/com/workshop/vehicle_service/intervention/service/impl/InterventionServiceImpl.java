@@ -1,8 +1,9 @@
 package com.workshop.vehicle_service.intervention.service.impl;
 
-import com.workshop.vehicle_service.common.exception.DateRestitutionInvalideException;
+import com.workshop.vehicle_service.common.exception.ArchivageNonAutoriseException;
 import com.workshop.vehicle_service.common.exception.InterventionInactiveException;
 import com.workshop.vehicle_service.common.exception.InterventionIntrouvableException;
+import com.workshop.vehicle_service.common.exception.ModificationInterventionNonAutoriseeException;
 import com.workshop.vehicle_service.intervention.dto.InterventionCreateRequest;
 import com.workshop.vehicle_service.intervention.dto.InterventionResponse;
 import com.workshop.vehicle_service.intervention.dto.InterventionUpdateRequest;
@@ -15,6 +16,7 @@ import com.workshop.vehicle_service.intervention.service.InterventionService;
 import com.workshop.vehicle_service.vehicule.entity.Vehicule;
 import com.workshop.vehicle_service.vehicule.service.VehiculeService;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class InterventionServiceImpl implements InterventionService  {
+public class InterventionServiceImpl implements InterventionService {
 
     private final InterventionRepository interventionRepository;
     private final VehiculeService vehiculeService;
@@ -39,18 +41,15 @@ public class InterventionServiceImpl implements InterventionService  {
         }
 
         LocalDateTime dateDepot = request.dateDepot() != null ? request.dateDepot() : LocalDateTime.now();
-        validateDates(dateDepot, request.dateRestitutionPrevue());
 
         Intervention intervention = Intervention.builder()
                 .numero(numeroGenerator.nextNumero())
                 .vehicule(vehicule)
                 .type(request.type())
                 .descriptionClient(request.descriptionClient())
-                .diagnostic(request.diagnostic())
                 .statut(StatutIntervention.RECUE)
                 .priorite(request.priorite())
                 .dateDepot(dateDepot)
-                .dateRestitutionPrevue(request.dateRestitutionPrevue())
                 .actif(true)
                 .build();
 
@@ -77,14 +76,12 @@ public class InterventionServiceImpl implements InterventionService  {
             throw new InterventionInactiveException(
                     "Intervention désactivée, modification impossible pour le numero " + numero);
         }
-        validateDates(request.dateDepot(), request.dateRestitutionPrevue());
+        validateUpdateAllowedByStatus(intervention, request);
 
         intervention.setType(request.type());
         intervention.setDescriptionClient(request.descriptionClient());
-        intervention.setDiagnostic(request.diagnostic());
         intervention.setPriorite(request.priorite());
         intervention.setDateDepot(request.dateDepot());
-        intervention.setDateRestitutionPrevue(request.dateRestitutionPrevue());
 
         Intervention saved = interventionRepository.save(intervention);
         return interventionMapper.toResponse(saved);
@@ -93,6 +90,10 @@ public class InterventionServiceImpl implements InterventionService  {
     @Override
     public void delete(String numero) {
         Intervention intervention = getEntityByNumero(numero);
+        if (!isArchivedStatus(intervention.getStatut())) {
+            throw new ArchivageNonAutoriseException(
+                    "Archivage impossible pour une intervention au statut " + intervention.getStatut());
+        }
         if (intervention.isActif()) {
             intervention.setActif(false);
             interventionRepository.save(intervention);
@@ -117,10 +118,33 @@ public class InterventionServiceImpl implements InterventionService  {
                         "Intervention introuvable pour le numero " + numero));
     }
 
-    private void validateDates(LocalDateTime dateDepot, LocalDateTime dateRestitutionPrevue) {
-        if (dateDepot != null && dateRestitutionPrevue != null && dateRestitutionPrevue.isBefore(dateDepot)) {
-            throw new DateRestitutionInvalideException(
-                    "dateRestitutionPrevue doit être postérieure ou égale à dateDepot");
+    private void validateUpdateAllowedByStatus(Intervention intervention, InterventionUpdateRequest request) {
+        StatutIntervention statut = intervention.getStatut();
+        if (statut == StatutIntervention.RESTITUEE || statut == StatutIntervention.ANNULEE) {
+            throw new ModificationInterventionNonAutoriseeException(
+                    "Modification interdite pour une intervention au statut " + statut);
+        }
+
+        if (statut != StatutIntervention.RECUE && !Objects.equals(request.type(), intervention.getType())) {
+            throw new ModificationInterventionNonAutoriseeException(
+                    "Le champ type est modifiable uniquement au statut RECUE");
+        }
+
+        if ((statut == StatutIntervention.EN_REPARATION || statut == StatutIntervention.TERMINEE)
+                && !Objects.equals(request.descriptionClient(), intervention.getDescriptionClient())) {
+            throw new ModificationInterventionNonAutoriseeException(
+                    "Le champ descriptionClient est modifiable jusqu'au statut DEVIS_A_VALIDER");
+        }
+
+        if ((statut == StatutIntervention.TERMINEE)
+                && !Objects.equals(request.priorite(), intervention.getPriorite())) {
+            throw new ModificationInterventionNonAutoriseeException(
+                    "Le champ priorite est modifiable jusqu'au statut EN_REPARATION");
+        }
+
+        if (statut != StatutIntervention.RECUE && !Objects.equals(request.dateDepot(), intervention.getDateDepot())) {
+            throw new ModificationInterventionNonAutoriseeException(
+                    "Le champ dateDepot est modifiable uniquement au statut RECUE");
         }
     }
 
@@ -129,6 +153,9 @@ public class InterventionServiceImpl implements InterventionService  {
             throw new IllegalArgumentException("Paramètres de pagination invalides");
         }
 
+    }
 
+    private boolean isArchivedStatus(StatutIntervention statut) {
+        return statut == StatutIntervention.RESTITUEE || statut == StatutIntervention.ANNULEE;
     }
 }

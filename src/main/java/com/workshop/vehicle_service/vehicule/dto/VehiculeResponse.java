@@ -7,6 +7,7 @@ public record VehiculeResponse(
         String modele,
         Integer annee,
         Integer kilometrage,
-        String clientFictif
+        String clientFictif,
+        boolean actif
 
 ) {}
