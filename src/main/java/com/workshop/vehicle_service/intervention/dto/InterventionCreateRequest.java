@@ -11,11 +11,9 @@ import java.time.LocalDateTime;
  * hors périmètre (RG-AUTO-01, RG-AUTO-08).
  */
 public record InterventionCreateRequest(
-        @NotNull Long vehiculeId,
-        @NotNull TypeIntervention type,
-        @NotBlank String descriptionClient,
-        String diagnostic,
-        @NotNull PrioriteIntervention priorite,
-        LocalDateTime dateDepot,
-        LocalDateTime dateRestitutionPrevue) {
+                @NotNull Long vehiculeId,
+                @NotNull TypeIntervention type,
+                @NotBlank String descriptionClient,
+                @NotNull PrioriteIntervention priorite,
+                LocalDateTime dateDepot) {
 }
