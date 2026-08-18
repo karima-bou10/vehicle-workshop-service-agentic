@@ -2,7 +2,6 @@ package com.workshop.vehicle_service.intervention.service.impl;
 
 import com.workshop.vehicle_service.common.exception.ArchivageNonAutoriseException;
 import com.workshop.vehicle_service.common.dto.JourCompte;
-import com.workshop.vehicle_service.common.exception.DateRestitutionInvalideException;
 import com.workshop.vehicle_service.common.exception.InterventionInactiveException;
 import com.workshop.vehicle_service.common.exception.InterventionIntrouvableException;
 import com.workshop.vehicle_service.common.exception.ModificationInterventionNonAutoriseeException;
