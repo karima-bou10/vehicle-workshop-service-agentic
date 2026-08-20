@@ -6,6 +6,7 @@ import com.workshop.vehicle_service.common.exception.InterventionInactiveExcepti
 import com.workshop.vehicle_service.common.exception.InterventionIntrouvableException;
 import com.workshop.vehicle_service.common.exception.ModificationInterventionNonAutoriseeException;
 import com.workshop.vehicle_service.intervention.dto.InterventionCreateRequest;
+import com.workshop.vehicle_service.intervention.dto.InterventionListFilter;
 import com.workshop.vehicle_service.intervention.dto.InterventionResponse;
 import com.workshop.vehicle_service.intervention.dto.InterventionUpdateRequest;
 import com.workshop.vehicle_service.intervention.entity.Intervention;
@@ -13,16 +14,18 @@ import com.workshop.vehicle_service.intervention.enums.StatutIntervention;
 import com.workshop.vehicle_service.intervention.enums.TypeIntervention;
 import com.workshop.vehicle_service.intervention.mapper.InterventionMapper;
 import com.workshop.vehicle_service.intervention.repository.InterventionRepository;
+import com.workshop.vehicle_service.intervention.repository.InterventionSpecifications;
 import com.workshop.vehicle_service.intervention.service.InterventionNumeroGenerator;
 import com.workshop.vehicle_service.intervention.service.InterventionService;
 import com.workshop.vehicle_service.vehicule.entity.Vehicule;
 import com.workshop.vehicle_service.vehicule.service.VehiculeService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Objects;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -35,11 +38,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class InterventionServiceImpl implements InterventionService {
 
-    /** Statuts considérés comme "clôturés" pour la charge active d'un mécanicien. */
+    private static final DateTimeFormatter CSV_DATE_TIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final String CSV_SEPARATOR = ",";
+
+    /**
+     * Statuts considérés comme "clôturés" pour la charge active d'un mécanicien.
+     */
     private static final List<StatutIntervention> STATUTS_CLOTURES = List.of(
             StatutIntervention.TERMINEE, StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
 
-    /** Statuts jamais considérés en retard, même si la date de restitution prévue est dépassée. */
+    /**
+     * Statuts jamais considérés en retard, même si la date de restitution prévue
+     * est dépassée.
+     */
     private static final List<StatutIntervention> STATUTS_EXCLUS_RETARD = List.of(
             StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
 
@@ -69,19 +80,63 @@ public class InterventionServiceImpl implements InterventionService {
                 .build();
 
         Intervention saved = interventionRepository.save(intervention);
-        return interventionMapper.toResponse(saved);
+        return toResponse(saved, LocalDateTime.now());
     }
 
     @Override
     @Transactional(readOnly = true)
     public InterventionResponse findByNumero(String numero) {
-        return interventionMapper.toResponse(getEntityByNumero(numero));
+        LocalDateTime evaluationTime = LocalDateTime.now();
+        return toResponse(getEntityByNumero(numero), evaluationTime);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<InterventionResponse> list(Pageable pageable) {
-        return interventionRepository.findByActifTrue(pageable).map(interventionMapper::toResponse);
+    public Page<InterventionResponse> list(InterventionListFilter filter, Pageable pageable) {
+        validatePageable(pageable);
+        LocalDateTime evaluationTime = LocalDateTime.now();
+        return interventionRepository.findAll(
+                InterventionSpecifications.build(filter, evaluationTime, STATUTS_EXCLUS_RETARD),
+                pageable).map(intervention -> toResponse(intervention, evaluationTime));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String exportCsv(InterventionListFilter filter) {
+        LocalDateTime evaluationTime = LocalDateTime.now();
+        List<Intervention> interventions = interventionRepository.findAll(
+                InterventionSpecifications.build(filter, evaluationTime, STATUTS_EXCLUS_RETARD),
+                org.springframework.data.domain.Sort
+                        .by(org.springframework.data.domain.Sort.Direction.DESC, "dateDepot")
+                        .and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC,
+                                "numero")));
+
+        StringBuilder csv = new StringBuilder();
+        csv.append(
+                "numero,immatriculation,marque,modele,type,statut,priorite,dateDepot,dateRestitutionPrevue,mecanicien,enRetard")
+                .append(System.lineSeparator());
+
+        for (Intervention intervention : interventions) {
+            boolean enRetard = InterventionSpecifications.isEnRetard(intervention, evaluationTime,
+                    STATUTS_EXCLUS_RETARD);
+            csv.append(csvValue(intervention.getNumero())).append(CSV_SEPARATOR)
+                    .append(csvValue(intervention.getVehicule().getImmatriculationFictive())).append(CSV_SEPARATOR)
+                    .append(csvValue(intervention.getVehicule().getMarque())).append(CSV_SEPARATOR)
+                    .append(csvValue(intervention.getVehicule().getModele())).append(CSV_SEPARATOR)
+                    .append(csvValue(typeLibelle(intervention.getType()))).append(CSV_SEPARATOR)
+                    .append(csvValue(InterventionSpecifications.statutLibelle(intervention.getStatut())))
+                    .append(CSV_SEPARATOR)
+                    .append(csvValue(prioriteLibelle(intervention.getPriorite().name()))).append(CSV_SEPARATOR)
+                    .append(csvValue(formatDateTime(intervention.getDateDepot()))).append(CSV_SEPARATOR)
+                    .append(csvValue(formatDateTime(intervention.getDateRestitutionPrevue()))).append(CSV_SEPARATOR)
+                    .append(csvValue(
+                            intervention.getMecanicien() != null ? intervention.getMecanicien().getNom() : null))
+                    .append(CSV_SEPARATOR)
+                    .append(csvValue(enRetard ? "oui" : "non"))
+                    .append(System.lineSeparator());
+        }
+
+        return csv.toString();
     }
 
     @Override
@@ -99,7 +154,7 @@ public class InterventionServiceImpl implements InterventionService {
         intervention.setDateDepot(request.dateDepot());
 
         Intervention saved = interventionRepository.save(intervention);
-        return interventionMapper.toResponse(saved);
+        return toResponse(saved, LocalDateTime.now());
     }
 
     @Override
@@ -124,7 +179,7 @@ public class InterventionServiceImpl implements InterventionService {
                 .findByVehiculeIdAndIdNotAndActifTrue(sourceIntervention.getVehicule().getId(),
                         sourceIntervention.getId(),
                         pageable)
-                .map(interventionMapper::toResponse);
+                .map(intervention -> toResponse(intervention, LocalDateTime.now()));
     }
 
     @Override
@@ -155,7 +210,7 @@ public class InterventionServiceImpl implements InterventionService {
         return interventionRepository
                 .findByActifTrueAndDateRestitutionPrevueBeforeAndStatutNotIn(LocalDateTime.now(),
                         STATUTS_EXCLUS_RETARD, pageable)
-                .map(interventionMapper::toResponse);
+                .map(intervention -> toResponse(intervention, LocalDateTime.now()));
     }
 
     @Override
@@ -204,6 +259,11 @@ public class InterventionServiceImpl implements InterventionService {
                         "Intervention introuvable pour le numero " + numero));
     }
 
+    private InterventionResponse toResponse(Intervention intervention, LocalDateTime evaluationTime) {
+        return interventionMapper.toResponse(intervention,
+                InterventionSpecifications.isEnRetard(intervention, evaluationTime, STATUTS_EXCLUS_RETARD));
+    }
+
     private void validateUpdateAllowedByStatus(Intervention intervention, InterventionUpdateRequest request) {
         StatutIntervention statut = intervention.getStatut();
         if (statut == StatutIntervention.RESTITUEE || statut == StatutIntervention.ANNULEE) {
@@ -243,5 +303,43 @@ public class InterventionServiceImpl implements InterventionService {
 
     private boolean isArchivedStatus(StatutIntervention statut) {
         return statut == StatutIntervention.RESTITUEE || statut == StatutIntervention.ANNULEE;
+    }
+
+    private String formatDateTime(LocalDateTime value) {
+        return value == null ? null : CSV_DATE_TIME_FORMATTER.format(value);
+    }
+
+    private String csvValue(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        String escaped = value.replace("\"", "\"\"");
+        if (escaped.contains(CSV_SEPARATOR) || escaped.contains("\"") || escaped.contains("\n")
+                || escaped.contains("\r")) {
+            return "\"" + escaped + "\"";
+        }
+        return escaped;
+    }
+
+    private String typeLibelle(TypeIntervention type) {
+        return switch (type) {
+            case DIAGNOSTIC -> "Diagnostic";
+            case REVISION -> "Révision";
+            case REPARATION -> "Réparation";
+            case CONTROLE -> "Contrôle";
+            case PNEUMATIQUES -> "Pneumatiques";
+            case AUTRE -> "Autre";
+        };
+    }
+
+    private String prioriteLibelle(String priorite) {
+        return switch (priorite) {
+            case "BASSE" -> "Basse";
+            case "NORMALE" -> "Normale";
+            case "HAUTE" -> "Haute";
+            case "URGENTE" -> "Urgente";
+            default -> priorite;
+        };
     }
 }

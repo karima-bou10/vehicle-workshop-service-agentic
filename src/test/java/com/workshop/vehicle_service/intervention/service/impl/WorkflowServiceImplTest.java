@@ -94,7 +94,7 @@ class WorkflowServiceImplTest {
                                                 entity.getPriorite(),
                                                 entity.getCoutEstime(), entity.getDateDepot(),
                                                 entity.getDateRestitutionPrevue(),
-                                                entity.getDateCloture(), entity.isActif()));
+                                                entity.getDateCloture(), entity.isActif(), false));
 
                 InterventionResponse result = workflowService.transition(entity.getNumero(),
                                 new TransitionRequest(StatutIntervention.DIAGNOSTIC_EN_COURS,
@@ -231,7 +231,7 @@ class WorkflowServiceImplTest {
                                                 entity.getPriorite(),
                                                 entity.getCoutEstime(), entity.getDateDepot(),
                                                 entity.getDateRestitutionPrevue(),
-                                                entity.getDateCloture(), entity.isActif()));
+                                                entity.getDateCloture(), entity.isActif(), false));
 
                 InterventionResponse result = workflowService.transition(entity.getNumero(),
                                 new TransitionRequest(StatutIntervention.RESTITUEE,
@@ -273,7 +273,7 @@ class WorkflowServiceImplTest {
                                                 entity.getCoutEstime(),
                                                 entity.getDateDepot(), entity.getDateRestitutionPrevue(),
                                                 entity.getDateCloture(),
-                                                entity.isActif()));
+                                                entity.isActif(), false));
 
                 workflowService.affecterMecanicien(entity.getNumero(), new MecanicienAffectationRequest(7L));
 
@@ -295,7 +295,7 @@ class WorkflowServiceImplTest {
                                                 entity.getPriorite(),
                                                 new BigDecimal("450.00"), entity.getDateDepot(),
                                                 entity.getDateRestitutionPrevue(),
-                                                entity.getDateCloture(), entity.isActif()));
+                                                entity.getDateCloture(), entity.isActif(), false));
 
                 workflowService.transition(entity.getNumero(),
                                 new TransitionRequest(StatutIntervention.DEVIS_A_VALIDER,
@@ -362,7 +362,7 @@ class WorkflowServiceImplTest {
                                                 entity.getPriorite(),
                                                 entity.getCoutEstime(), entity.getDateDepot(),
                                                 entity.getDateRestitutionPrevue(),
-                                                entity.getDateCloture(), entity.isActif()));
+                                                entity.getDateCloture(), entity.isActif(), false));
 
                 workflowService.transition(entity.getNumero(),
                                 new TransitionRequest(StatutIntervention.ANNULEE,

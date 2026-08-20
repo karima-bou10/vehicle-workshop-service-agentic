@@ -3,10 +3,12 @@ package com.workshop.vehicle_service.intervention.controller;
 import com.workshop.vehicle_service.historique.dto.HistoriqueInterventionResponse;
 import com.workshop.vehicle_service.historique.service.HistoriqueInterventionService;
 import com.workshop.vehicle_service.intervention.dto.InterventionCreateRequest;
+import com.workshop.vehicle_service.intervention.dto.InterventionListFilter;
 import com.workshop.vehicle_service.intervention.dto.MecanicienAffectationRequest;
 import com.workshop.vehicle_service.intervention.dto.InterventionResponse;
 import com.workshop.vehicle_service.intervention.dto.TransitionRequest;
 import com.workshop.vehicle_service.intervention.dto.InterventionUpdateRequest;
+import com.workshop.vehicle_service.intervention.enums.StatutIntervention;
 import com.workshop.vehicle_service.intervention.service.InterventionService;
 import com.workshop.vehicle_service.intervention.service.WorkflowService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +25,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -33,6 +37,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -71,16 +76,48 @@ public class InterventionController {
                 return ResponseEntity.ok(interventionService.findByNumero(numero));
         }
 
-        @Operation(summary = "Lister les interventions actives (paginé)")
+        @Operation(summary = "Lister les interventions actives avec filtres optionnels et indicateur de retard")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Page d'interventions actives"),
-                        @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
+                        @ApiResponse(responseCode = "400", description = "Paramètres de filtre, pagination ou tri invalides"),
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @GetMapping
         public ResponseEntity<Page<InterventionResponse>> list(
+                        @RequestParam(required = false) StatutIntervention statut,
+                        @RequestParam(required = false) Long mecanicienId,
+                        @RequestParam(required = false) Long vehiculeId,
+                        @RequestParam(required = false) String immatriculation,
+                        @RequestParam(required = false) String q,
+                        @RequestParam(required = false) Boolean enRetard,
                         @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
-                return ResponseEntity.ok(interventionService.list(pageable));
+                return ResponseEntity.ok(interventionService.list(
+                                new InterventionListFilter(statut, mecanicienId, vehiculeId, immatriculation, q,
+                                                enRetard),
+                                pageable));
+        }
+
+        @Operation(summary = "Exporter en CSV les interventions filtrées")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "CSV généré"),
+                        @ApiResponse(responseCode = "400", description = "Paramètres de filtre invalides"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @GetMapping(value = "/export", produces = "text/csv")
+        public ResponseEntity<String> export(
+                        @RequestParam(required = false) StatutIntervention statut,
+                        @RequestParam(required = false) Long mecanicienId,
+                        @RequestParam(required = false) Long vehiculeId,
+                        @RequestParam(required = false) String immatriculation,
+                        @RequestParam(required = false) String q,
+                        @RequestParam(required = false) Boolean enRetard) {
+                String csv = interventionService.exportCsv(
+                                new InterventionListFilter(statut, mecanicienId, vehiculeId, immatriculation, q,
+                                                enRetard));
+                return ResponseEntity.ok()
+                                .contentType(MediaType.parseMediaType("text/csv"))
+                                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"interventions.csv\"")
+                                .body(csv);
         }
 
         @Operation(summary = "Éditer les champs métier autorisés selon le statut courant")
@@ -143,7 +180,7 @@ public class InterventionController {
                 return ResponseEntity.ok(workflowService.affecterMecanicien(numero, request));
         }
 
-        @Operation(summary = "Consulter la timeline d'une intervention")
+        @Operation(summary = "Consulter la timeline complète d'une intervention avec transition, auteur, date et motif éventuel")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Historique paginé"),
                         @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
