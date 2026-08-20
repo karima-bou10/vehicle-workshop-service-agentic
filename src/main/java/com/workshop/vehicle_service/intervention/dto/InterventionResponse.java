@@ -13,17 +13,18 @@ import java.time.LocalDateTime;
  * identifiant métier).
  */
 public record InterventionResponse(
-        String numero,
-        VehiculeSummaryResponse vehicule,
-        MecanicienSummaryResponse mecanicien,
-        TypeIntervention type,
-        String descriptionClient,
-        String diagnostic,
-        StatutIntervention statut,
-        PrioriteIntervention priorite,
-        BigDecimal coutEstime,
-        LocalDateTime dateDepot,
-        LocalDateTime dateRestitutionPrevue,
-        LocalDateTime dateCloture,
-        boolean actif) {
+                String numero,
+                VehiculeSummaryResponse vehicule,
+                MecanicienSummaryResponse mecanicien,
+                TypeIntervention type,
+                String descriptionClient,
+                String diagnostic,
+                StatutIntervention statut,
+                PrioriteIntervention priorite,
+                BigDecimal coutEstime,
+                LocalDateTime dateDepot,
+                LocalDateTime dateRestitutionPrevue,
+                LocalDateTime dateCloture,
+                boolean actif,
+                boolean enRetard) {
 }

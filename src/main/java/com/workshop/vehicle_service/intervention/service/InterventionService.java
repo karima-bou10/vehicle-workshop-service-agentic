@@ -2,6 +2,7 @@ package com.workshop.vehicle_service.intervention.service;
 
 import com.workshop.vehicle_service.common.dto.JourCompte;
 import com.workshop.vehicle_service.intervention.dto.InterventionCreateRequest;
+import com.workshop.vehicle_service.intervention.dto.InterventionListFilter;
 import com.workshop.vehicle_service.intervention.dto.InterventionResponse;
 import com.workshop.vehicle_service.intervention.dto.InterventionUpdateRequest;
 import com.workshop.vehicle_service.intervention.enums.StatutIntervention;
@@ -18,7 +19,9 @@ public interface InterventionService {
 
     InterventionResponse findByNumero(String numero);
 
-    Page<InterventionResponse> list(Pageable pageable);
+    Page<InterventionResponse> list(InterventionListFilter filter, Pageable pageable);
+
+    String exportCsv(InterventionListFilter filter);
 
     InterventionResponse update(String numero, InterventionUpdateRequest request);
 
@@ -28,7 +31,9 @@ public interface InterventionService {
 
     // --- Lecture agrégée pour le dashboard (§3.6) — jamais d'écriture ---
 
-    /** Interventions actives dont la date de dépôt est le jour calendaire courant. */
+    /**
+     * Interventions actives dont la date de dépôt est le jour calendaire courant.
+     */
     long countRecuesAujourdHui();
 
     /** Interventions actives actuellement dans le statut donné. */
@@ -41,13 +46,22 @@ public interface InterventionService {
      */
     long countRetards();
 
-    /** Liste paginée des interventions en retard (même règle que {@link #countRetards()}). */
+    /**
+     * Liste paginée des interventions en retard (même règle que
+     * {@link #countRetards()}).
+     */
     Page<InterventionResponse> findRetards(Pageable pageable);
 
-    /** Répartition du nombre d'interventions actives par statut (clés présentes uniquement si total > 0). */
+    /**
+     * Répartition du nombre d'interventions actives par statut (clés présentes
+     * uniquement si total > 0).
+     */
     Map<StatutIntervention, Long> countParStatut();
 
-    /** Répartition du nombre d'interventions actives par type (clés présentes uniquement si total > 0). */
+    /**
+     * Répartition du nombre d'interventions actives par type (clés présentes
+     * uniquement si total > 0).
+     */
     Map<TypeIntervention, Long> countParType();
 
     /**
@@ -57,6 +71,9 @@ public interface InterventionService {
      */
     Map<Long, Long> chargeActiveParMecanicien();
 
-    /** Série journalière des interventions reçues sur [debut, finInclusive], un point par jour, sans trou. */
+    /**
+     * Série journalière des interventions reçues sur [debut, finInclusive], un
+     * point par jour, sans trou.
+     */
     List<JourCompte> volumeRecuesParJour(LocalDate debut, LocalDate finInclusive);
 }

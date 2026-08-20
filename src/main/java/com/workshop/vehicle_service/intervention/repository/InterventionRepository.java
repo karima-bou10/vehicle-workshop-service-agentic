@@ -10,10 +10,12 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface InterventionRepository extends JpaRepository<Intervention, Long> {
+public interface InterventionRepository
+        extends JpaRepository<Intervention, Long>, JpaSpecificationExecutor<Intervention> {
     Page<Intervention> findByVehiculeId(Long vehiculeId, Pageable pageable);
 
     Page<Intervention> findByMecanicienId(Long mecanicienId, Pageable pageable);
@@ -46,7 +48,8 @@ public interface InterventionRepository extends JpaRepository<Intervention, Long
     @Query("SELECT i.mecanicien.id AS mecanicienId, COUNT(i) AS total FROM Intervention i "
             + "WHERE i.actif = true AND i.mecanicien IS NOT NULL AND i.statut NOT IN :statutsClotures "
             + "GROUP BY i.mecanicien.id")
-    List<MecanicienCharge> chargeActiveParMecanicien(@Param("statutsClotures") Collection<StatutIntervention> statutsClotures);
+    List<MecanicienCharge> chargeActiveParMecanicien(
+            @Param("statutsClotures") Collection<StatutIntervention> statutsClotures);
 
     @Query("SELECT i.dateDepot FROM Intervention i WHERE i.actif = true AND i.dateDepot >= :debut AND i.dateDepot < :fin")
     List<LocalDateTime> findDateDepotDansPeriode(@Param("debut") LocalDateTime debut, @Param("fin") LocalDateTime fin);
@@ -65,7 +68,10 @@ public interface InterventionRepository extends JpaRepository<Intervention, Long
         long getTotal();
     }
 
-    /** Projection de charge active par mécanicien (dashboard — charge par mécanicien). */
+    /**
+     * Projection de charge active par mécanicien (dashboard — charge par
+     * mécanicien).
+     */
     interface MecanicienCharge {
         Long getMecanicienId();
 
