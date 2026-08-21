@@ -23,4 +23,13 @@ public interface MecanicienService {
     MecanicienResponse updateDisponibilite(Long id, MecanicienDisponibiliteRequest request);
 
     void desactiver(Long id);
+
+    /** Mécaniciens actifs et disponibles, paginé. */
+    Page<MecanicienResponse> listDisponibles(Pageable pageable);
+
+    /** Mécaniciens actifs et indisponibles, paginé. */
+    Page<MecanicienResponse> listIndisponibles(Pageable pageable);
+
+    /** Recherche paginée des mécaniciens actifs par nom et/ou spécialité (les deux critères sont optionnels). */
+    Page<MecanicienResponse> search(String nom, String specialite, Pageable pageable);
 }

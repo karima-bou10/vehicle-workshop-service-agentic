@@ -12,9 +12,11 @@ import com.workshop.vehicle_service.intervention.mapper.InterventionMapper;
 import com.workshop.vehicle_service.intervention.repository.InterventionRepository;
 import com.workshop.vehicle_service.intervention.service.InterventionNumeroGenerator;
 import com.workshop.vehicle_service.intervention.service.InterventionService;
+import com.workshop.vehicle_service.mecanicien.service.MecanicienService;
 import com.workshop.vehicle_service.vehicule.entity.Vehicule;
 import com.workshop.vehicle_service.vehicule.service.VehiculeService;
 import java.time.LocalDateTime;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,8 +28,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class InterventionServiceImpl implements InterventionService  {
 
+    private static final Set<StatutIntervention> STATUTS_FINAUX = Set.of(
+            StatutIntervention.TERMINEE, StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
+
     private final InterventionRepository interventionRepository;
     private final VehiculeService vehiculeService;
+    private final MecanicienService mecanicienService;
     private final InterventionNumeroGenerator numeroGenerator;
     private final InterventionMapper interventionMapper;
 
@@ -109,6 +115,22 @@ public class InterventionServiceImpl implements InterventionService  {
                         sourceIntervention.getId(),
                         pageable)
                 .map(interventionMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<InterventionResponse> findByMecanicien(Long mecanicienId, Pageable pageable) {
+        validatePageable(pageable);
+        // Vérifie l'existence du mécanicien (actif ou non) — 404 sinon.
+        mecanicienService.findById(mecanicienId);
+        return interventionRepository.findByMecanicienIdAndActifTrue(mecanicienId, pageable)
+                .map(interventionMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasInterventionsActivesNonFinales(Long mecanicienId) {
+        return interventionRepository.existsByMecanicienIdAndActifTrueAndStatutNotIn(mecanicienId, STATUTS_FINAUX);
     }
 
     private Intervention getEntityByNumero(String numero) {

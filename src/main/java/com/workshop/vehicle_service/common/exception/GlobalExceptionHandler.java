@@ -84,6 +84,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(MecanicienDesactivationInterditeException.class)
+    public ResponseEntity<ApiErrorResponse> handleMecanicienDesactivationInterdite(
+            MecanicienDesactivationInterditeException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex,
             HttpServletRequest request) {

@@ -166,4 +166,17 @@ public class InterventionController {
             @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(interventionService.findAutresInterventionsDuVehicule(numero, pageable));
     }
+
+    @Operation(summary = "Lister les interventions actives (non archivées) affectées à un mécanicien")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Page d'interventions du mécanicien"),
+            @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
+            @ApiResponse(responseCode = "404", description = "Mécanicien introuvable"),
+            @ApiResponse(responseCode = "401", description = "Non authentifié")
+    })
+    @GetMapping("/mecanicien/{mecanicienId}")
+    public ResponseEntity<Page<InterventionResponse>> getByMecanicien(@PathVariable Long mecanicienId,
+            @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(interventionService.findByMecanicien(mecanicienId, pageable));
+    }
 }

@@ -19,4 +19,9 @@ public interface InterventionService {
     void delete(String numero);
 
     Page<InterventionResponse> findAutresInterventionsDuVehicule(String numero, Pageable pageable);
+
+    Page<InterventionResponse> findByMecanicien(Long mecanicienId, Pageable pageable);
+
+    /** Vrai si le mécanicien possède au moins une intervention active dont le statut n'est pas final. */
+    boolean hasInterventionsActivesNonFinales(Long mecanicienId);
 }
