@@ -13,6 +13,7 @@ import com.workshop.vehicle_service.mecanicien.enums.Specialite;
 import com.workshop.vehicle_service.mecanicien.mapper.MecanicienMapper;
 import com.workshop.vehicle_service.mecanicien.repository.MecanicienRepository;
 import com.workshop.vehicle_service.mecanicien.service.MecanicienService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
@@ -109,6 +110,14 @@ public class MecanicienServiceImpl implements MecanicienService {
             mecanicien.setActif(false);
             mecanicienRepository.save(mecanicien);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MecanicienResponse> listActifs() {
+        return mecanicienRepository.findByActifTrueOrderByNomAsc().stream()
+                .map(mecanicienMapper::toResponse)
+                .toList();
     }
 
     @Override

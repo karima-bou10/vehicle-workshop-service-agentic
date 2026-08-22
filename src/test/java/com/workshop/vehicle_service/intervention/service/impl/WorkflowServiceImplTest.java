@@ -1,8 +1,12 @@
 package com.workshop.vehicle_service.intervention.service.impl;
 
 import com.workshop.vehicle_service.common.exception.CoutEstimeManquantException;
+import com.workshop.vehicle_service.common.exception.AnnulationNonAutoriseeException;
+import com.workshop.vehicle_service.common.exception.DateRestitutionInvalideException;
+import com.workshop.vehicle_service.common.exception.DiagnosticManquantException;
 import com.workshop.vehicle_service.common.exception.InterventionInactiveException;
 import com.workshop.vehicle_service.common.exception.MecanicienNonAffecteException;
+import com.workshop.vehicle_service.common.exception.MotifAnnulationManquantException;
 import com.workshop.vehicle_service.common.exception.RestitutionNonAutoriseeException;
 import com.workshop.vehicle_service.common.exception.TransitionIllegaleException;
 import com.workshop.vehicle_service.historique.entity.HistoriqueIntervention;
@@ -43,188 +47,351 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class WorkflowServiceImplTest {
 
-    @Mock
-    private InterventionRepository interventionRepository;
+        @Mock
+        private InterventionRepository interventionRepository;
 
-    @Mock
-    private MecanicienService mecanicienService;
+        @Mock
+        private MecanicienService mecanicienService;
 
-    @Mock
-    private InterventionMapper interventionMapper;
+        @Mock
+        private InterventionMapper interventionMapper;
 
-    @InjectMocks
-    private WorkflowServiceImpl workflowService;
+        @InjectMocks
+        private WorkflowServiceImpl workflowService;
 
-    @AfterEach
-    void clearSecurity() {
-        SecurityContextHolder.clearContext();
-    }
+        @AfterEach
+        void clearSecurity() {
+                SecurityContextHolder.clearContext();
+        }
 
-    private Intervention intervention(String numero, StatutIntervention statut, boolean actif, Mecanicien mecanicien) {
-        return Intervention.builder()
-                .numero(numero)
-                .vehicule(Vehicule.builder().id(10L).actif(true).build())
-                .type(TypeIntervention.REPARATION)
-                .descriptionClient("desc")
-                .statut(statut)
-                .priorite(PrioriteIntervention.NORMALE)
-                .dateDepot(LocalDateTime.now())
-                .actif(actif)
-                .mecanicien(mecanicien)
-                .historiques(new ArrayList<>())
-                .build();
-    }
+        private Intervention intervention(String numero, StatutIntervention statut, boolean actif,
+                        Mecanicien mecanicien) {
+                return Intervention.builder()
+                                .numero(numero)
+                                .vehicule(Vehicule.builder().id(10L).actif(true).build())
+                                .type(TypeIntervention.REPARATION)
+                                .descriptionClient("desc")
+                                .statut(statut)
+                                .priorite(PrioriteIntervention.NORMALE)
+                                .dateDepot(LocalDateTime.now())
+                                .actif(actif)
+                                .mecanicien(mecanicien)
+                                .historiques(new ArrayList<>())
+                                .build();
+        }
 
-    @Test
-    void transitionLegalShouldUpdateStatutAndCreateHistorique() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("user1", "n/a", java.util.List.of()));
-        Intervention entity = intervention("INT-2026-000001", StatutIntervention.RECUE, true, null);
-        when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
-        when(interventionRepository.save(any(Intervention.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(interventionMapper.toResponse(any(Intervention.class))).thenReturn(
-                new InterventionResponse(entity.getNumero(), null, null, entity.getType(),
-                        entity.getDescriptionClient(),
-                        entity.getDiagnostic(), StatutIntervention.DIAGNOSTIC_EN_COURS, entity.getPriorite(),
-                        entity.getCoutEstime(), entity.getDateDepot(), entity.getDateRestitutionPrevue(),
-                        entity.getDateCloture(), entity.isActif()));
+        @Test
+        void transitionLegalShouldUpdateStatutAndCreateHistorique() {
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken("user1", "n/a", java.util.List.of()));
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.RECUE, true, null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+                when(interventionRepository.save(any(Intervention.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(interventionMapper.toResponse(any(Intervention.class))).thenReturn(
+                                new InterventionResponse(entity.getNumero(), null, null, entity.getType(),
+                                                entity.getDescriptionClient(),
+                                                entity.getDiagnostic(), StatutIntervention.DIAGNOSTIC_EN_COURS,
+                                                entity.getPriorite(),
+                                                entity.getCoutEstime(), entity.getDateDepot(),
+                                                entity.getDateRestitutionPrevue(),
+                                                entity.getDateCloture(), entity.isActif(), false));
 
-        InterventionResponse result = workflowService.transition(entity.getNumero(),
-                new TransitionRequest(StatutIntervention.DIAGNOSTIC_EN_COURS, null));
+                InterventionResponse result = workflowService.transition(entity.getNumero(),
+                                new TransitionRequest(StatutIntervention.DIAGNOSTIC_EN_COURS,
+                                                "Diagnostic initial",
+                                                null,
+                                                null,
+                                                null));
 
-        assertEquals(StatutIntervention.DIAGNOSTIC_EN_COURS, entity.getStatut());
-        assertEquals(1, entity.getHistoriques().size());
-        HistoriqueIntervention hist = entity.getHistoriques().get(0);
-        assertEquals(StatutIntervention.RECUE, hist.getAncienStatut());
-        assertEquals(StatutIntervention.DIAGNOSTIC_EN_COURS, hist.getNouveauStatut());
-        assertEquals("user1", hist.getAuteur());
-        assertNotNull(hist.getDate());
-        assertEquals(StatutIntervention.DIAGNOSTIC_EN_COURS, result.statut());
-    }
+                assertEquals(StatutIntervention.DIAGNOSTIC_EN_COURS, entity.getStatut());
+                assertEquals(1, entity.getHistoriques().size());
+                HistoriqueIntervention hist = entity.getHistoriques().get(0);
+                assertEquals(StatutIntervention.RECUE, hist.getAncienStatut());
+                assertEquals(StatutIntervention.DIAGNOSTIC_EN_COURS, hist.getNouveauStatut());
+                assertEquals("user1", hist.getAuteur());
+                assertNotNull(hist.getDate());
+                assertEquals(StatutIntervention.DIAGNOSTIC_EN_COURS, result.statut());
+        }
 
-    @Test
-    void transitionIllegalShouldBeRejected() {
-        Intervention entity = intervention("INT-2026-000001", StatutIntervention.RECUE, true, null);
-        when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+        @Test
+        void transitionToDiagnosticShouldRequireDiagnostic() {
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.RECUE, true, null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
 
-        assertThrows(TransitionIllegaleException.class,
-                () -> workflowService.transition(entity.getNumero(),
-                        new TransitionRequest(StatutIntervention.EN_REPARATION, null)));
+                assertThrows(DiagnosticManquantException.class,
+                                () -> workflowService.transition(entity.getNumero(),
+                                                new TransitionRequest(StatutIntervention.DIAGNOSTIC_EN_COURS,
+                                                                "   ",
+                                                                null,
+                                                                null,
+                                                                null)));
 
-        verify(interventionRepository, never()).save(any());
-        assertEquals(0, entity.getHistoriques().size());
-    }
+                verify(interventionRepository, never()).save(any());
+        }
 
-    @Test
-    void transitionToDevisShouldRequireCoutEstime() {
-        Intervention entity = intervention("INT-2026-000001", StatutIntervention.DIAGNOSTIC_EN_COURS, true, null);
-        when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+        @Test
+        void transitionIllegalShouldBeRejected() {
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.RECUE, true, null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
 
-        assertThrows(CoutEstimeManquantException.class,
-                () -> workflowService.transition(entity.getNumero(),
-                        new TransitionRequest(StatutIntervention.DEVIS_A_VALIDER, null)));
+                assertThrows(TransitionIllegaleException.class,
+                                () -> workflowService.transition(entity.getNumero(),
+                                                new TransitionRequest(StatutIntervention.EN_REPARATION,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null)));
 
-        verify(interventionRepository, never()).save(any());
-    }
+                verify(interventionRepository, never()).save(any());
+                assertEquals(0, entity.getHistoriques().size());
+        }
 
-    @Test
-    void transitionToEnReparationShouldRequireMecanicien() {
-        Intervention entity = intervention("INT-2026-000001", StatutIntervention.DEVIS_A_VALIDER, true, null);
-        when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+        @Test
+        void transitionToDevisShouldRequireCoutEstime() {
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.DIAGNOSTIC_EN_COURS, true,
+                                null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
 
-        assertThrows(MecanicienNonAffecteException.class,
-                () -> workflowService.transition(entity.getNumero(),
-                        new TransitionRequest(StatutIntervention.EN_REPARATION, null)));
+                assertThrows(CoutEstimeManquantException.class,
+                                () -> workflowService.transition(entity.getNumero(),
+                                                new TransitionRequest(StatutIntervention.DEVIS_A_VALIDER,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null)));
 
-        verify(interventionRepository, never()).save(any());
-    }
+                verify(interventionRepository, never()).save(any());
+        }
 
-    @Test
-    void restitutionShouldRequireManagerRole() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("user1", "n/a", java.util.List.of()));
-        Mecanicien mecanicien = Mecanicien.builder().id(7L).actif(true).build();
-        Intervention entity = intervention("INT-2026-000001", StatutIntervention.TERMINEE, true, mecanicien);
-        when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+        @Test
+        void transitionToDevisShouldRequireDateRestitutionPrevueNotPast() {
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.DIAGNOSTIC_EN_COURS, true,
+                                null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
 
-        assertThrows(RestitutionNonAutoriseeException.class,
-                () -> workflowService.transition(entity.getNumero(),
-                        new TransitionRequest(StatutIntervention.RESTITUEE, null)));
+                assertThrows(DateRestitutionInvalideException.class,
+                                () -> workflowService.transition(entity.getNumero(),
+                                                new TransitionRequest(StatutIntervention.DEVIS_A_VALIDER,
+                                                                null,
+                                                                new BigDecimal("200.00"),
+                                                                LocalDateTime.now().minusDays(1),
+                                                                null)));
 
-        verify(interventionRepository, never()).save(any());
-    }
+                verify(interventionRepository, never()).save(any());
+        }
 
-    @Test
-    void restitutionShouldSucceedForManager() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("manager1", "n/a",
-                        java.util.List.of(() -> "ROLE_MANAGER")));
-        Mecanicien mecanicien = Mecanicien.builder().id(7L).actif(true).build();
-        Intervention entity = intervention("INT-2026-000001", StatutIntervention.TERMINEE, true, mecanicien);
-        when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
-        when(interventionRepository.save(any(Intervention.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(interventionMapper.toResponse(any(Intervention.class))).thenReturn(
-                new InterventionResponse(entity.getNumero(), null, null, entity.getType(),
-                        entity.getDescriptionClient(),
-                        entity.getDiagnostic(), StatutIntervention.RESTITUEE, entity.getPriorite(),
-                        entity.getCoutEstime(), entity.getDateDepot(), entity.getDateRestitutionPrevue(),
-                        entity.getDateCloture(), entity.isActif()));
+        @Test
+        void transitionToEnReparationShouldRequireMecanicien() {
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.DEVIS_A_VALIDER, true, null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
 
-        InterventionResponse result = workflowService.transition(entity.getNumero(),
-                new TransitionRequest(StatutIntervention.RESTITUEE, null));
+                assertThrows(MecanicienNonAffecteException.class,
+                                () -> workflowService.transition(entity.getNumero(),
+                                                new TransitionRequest(StatutIntervention.EN_REPARATION,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null)));
 
-        assertEquals(StatutIntervention.RESTITUEE, result.statut());
-        assertEquals(1, entity.getHistoriques().size());
-    }
+                verify(interventionRepository, never()).save(any());
+        }
 
-    @Test
-    void transitionShouldRejectInactiveIntervention() {
-        Intervention entity = intervention("INT-2026-000001", StatutIntervention.RECUE, false, null);
-        when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+        @Test
+        void restitutionShouldRequireManagerRole() {
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken("user1", "n/a", java.util.List.of()));
+                Mecanicien mecanicien = Mecanicien.builder().id(7L).actif(true).build();
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.TERMINEE, true, mecanicien);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
 
-        assertThrows(InterventionInactiveException.class,
-                () -> workflowService.transition(entity.getNumero(),
-                        new TransitionRequest(StatutIntervention.DIAGNOSTIC_EN_COURS, null)));
-    }
+                assertThrows(RestitutionNonAutoriseeException.class,
+                                () -> workflowService.transition(entity.getNumero(),
+                                                new TransitionRequest(StatutIntervention.RESTITUEE,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                null)));
 
-    @Test
-    void affecterMecanicienShouldAssignWhenInterventionActif() {
-        Intervention entity = intervention("INT-2026-000001", StatutIntervention.RECUE, true, null);
-        Mecanicien mecanicien = Mecanicien.builder().id(7L).actif(true).build();
-        when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
-        when(mecanicienService.findActifById(7L)).thenReturn(mecanicien);
-        when(interventionRepository.save(any(Intervention.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(interventionMapper.toResponse(any(Intervention.class))).thenReturn(
-                new InterventionResponse(entity.getNumero(), null, null, entity.getType(),
-                        entity.getDescriptionClient(),
-                        entity.getDiagnostic(), entity.getStatut(), entity.getPriorite(), entity.getCoutEstime(),
-                        entity.getDateDepot(), entity.getDateRestitutionPrevue(), entity.getDateCloture(),
-                        entity.isActif()));
+                verify(interventionRepository, never()).save(any());
+        }
 
-        workflowService.affecterMecanicien(entity.getNumero(), new MecanicienAffectationRequest(7L));
+        @Test
+        void restitutionShouldSucceedForManager() {
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken("manager1", "n/a",
+                                                java.util.List.of(() -> "ROLE_MANAGER")));
+                Mecanicien mecanicien = Mecanicien.builder().id(7L).actif(true).build();
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.TERMINEE, true, mecanicien);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+                when(interventionRepository.save(any(Intervention.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(interventionMapper.toResponse(any(Intervention.class))).thenReturn(
+                                new InterventionResponse(entity.getNumero(), null, null, entity.getType(),
+                                                entity.getDescriptionClient(),
+                                                entity.getDiagnostic(), StatutIntervention.RESTITUEE,
+                                                entity.getPriorite(),
+                                                entity.getCoutEstime(), entity.getDateDepot(),
+                                                entity.getDateRestitutionPrevue(),
+                                                entity.getDateCloture(), entity.isActif(), false));
 
-        assertEquals(mecanicien, entity.getMecanicien());
-    }
+                InterventionResponse result = workflowService.transition(entity.getNumero(),
+                                new TransitionRequest(StatutIntervention.RESTITUEE,
+                                                null,
+                                                null,
+                                                null,
+                                                null));
 
-    @Test
-    void transitionToDevisShouldPersistCoutEstimeFromRequest() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("user1", "n/a", java.util.List.of()));
-        Intervention entity = intervention("INT-2026-000001", StatutIntervention.DIAGNOSTIC_EN_COURS, true, null);
-        when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
-        when(interventionRepository.save(any(Intervention.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(interventionMapper.toResponse(any(Intervention.class))).thenReturn(
-                new InterventionResponse(entity.getNumero(), null, null, entity.getType(),
-                        entity.getDescriptionClient(),
-                        entity.getDiagnostic(), StatutIntervention.DEVIS_A_VALIDER, entity.getPriorite(),
-                        new BigDecimal("450.00"), entity.getDateDepot(), entity.getDateRestitutionPrevue(),
-                        entity.getDateCloture(), entity.isActif()));
+                assertEquals(StatutIntervention.RESTITUEE, result.statut());
+                assertEquals(1, entity.getHistoriques().size());
+                assertNotNull(entity.getDateCloture());
+        }
 
-        workflowService.transition(entity.getNumero(),
-                new TransitionRequest(StatutIntervention.DEVIS_A_VALIDER, new BigDecimal("450.00")));
+        @Test
+        void transitionShouldRejectInactiveIntervention() {
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.RECUE, false, null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
 
-        ArgumentCaptor<Intervention> captor = ArgumentCaptor.forClass(Intervention.class);
-        verify(interventionRepository).save(captor.capture());
-        assertEquals(new BigDecimal("450.00"), captor.getValue().getCoutEstime());
-    }
+                assertThrows(InterventionInactiveException.class,
+                                () -> workflowService.transition(entity.getNumero(),
+                                                new TransitionRequest(StatutIntervention.DIAGNOSTIC_EN_COURS,
+                                                                "Diagnostic",
+                                                                null,
+                                                                null,
+                                                                null)));
+        }
+
+        @Test
+        void affecterMecanicienShouldAssignWhenInterventionActif() {
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.RECUE, true, null);
+                Mecanicien mecanicien = Mecanicien.builder().id(7L).actif(true).build();
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+                when(mecanicienService.findActifById(7L)).thenReturn(mecanicien);
+                when(interventionRepository.save(any(Intervention.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(interventionMapper.toResponse(any(Intervention.class))).thenReturn(
+                                new InterventionResponse(entity.getNumero(), null, null, entity.getType(),
+                                                entity.getDescriptionClient(),
+                                                entity.getDiagnostic(), entity.getStatut(), entity.getPriorite(),
+                                                entity.getCoutEstime(),
+                                                entity.getDateDepot(), entity.getDateRestitutionPrevue(),
+                                                entity.getDateCloture(),
+                                                entity.isActif(), false));
+
+                workflowService.affecterMecanicien(entity.getNumero(), new MecanicienAffectationRequest(7L));
+
+                assertEquals(mecanicien, entity.getMecanicien());
+        }
+
+        @Test
+        void transitionToDevisShouldPersistCoutEstimeFromRequest() {
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken("user1", "n/a", java.util.List.of()));
+                Intervention entity = intervention("INT-2026-000001", StatutIntervention.DIAGNOSTIC_EN_COURS, true,
+                                null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+                when(interventionRepository.save(any(Intervention.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(interventionMapper.toResponse(any(Intervention.class))).thenReturn(
+                                new InterventionResponse(entity.getNumero(), null, null, entity.getType(),
+                                                entity.getDescriptionClient(),
+                                                entity.getDiagnostic(), StatutIntervention.DEVIS_A_VALIDER,
+                                                entity.getPriorite(),
+                                                new BigDecimal("450.00"), entity.getDateDepot(),
+                                                entity.getDateRestitutionPrevue(),
+                                                entity.getDateCloture(), entity.isActif(), false));
+
+                workflowService.transition(entity.getNumero(),
+                                new TransitionRequest(StatutIntervention.DEVIS_A_VALIDER,
+                                                null,
+                                                new BigDecimal("450.00"),
+                                                LocalDateTime.now().plusDays(2),
+                                                null));
+
+                ArgumentCaptor<Intervention> captor = ArgumentCaptor.forClass(Intervention.class);
+                verify(interventionRepository).save(captor.capture());
+                assertEquals(new BigDecimal("450.00"), captor.getValue().getCoutEstime());
+        }
+
+        @Test
+        void annulationShouldBeRejectedForUserRoleEvenWhenSourceIsLegal() {
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken("user1", "n/a", java.util.List.of()));
+                Intervention entity = intervention("INT-2026-000010", StatutIntervention.RECUE, true, null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+
+                assertThrows(AnnulationNonAutoriseeException.class,
+                                () -> workflowService.transition(entity.getNumero(),
+                                                new TransitionRequest(StatutIntervention.ANNULEE,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                "Demande client")));
+
+                verify(interventionRepository, never()).save(any());
+        }
+
+        @Test
+        void annulationShouldRejectMissingMotifEvenForManager() {
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken("manager1", "n/a",
+                                                java.util.List.of(() -> "ROLE_MANAGER")));
+                Intervention entity = intervention("INT-2026-000011", StatutIntervention.RECUE, true, null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+
+                assertThrows(MotifAnnulationManquantException.class,
+                                () -> workflowService.transition(entity.getNumero(),
+                                                new TransitionRequest(StatutIntervention.ANNULEE,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                "   ")));
+
+                verify(interventionRepository, never()).save(any());
+        }
+
+        @Test
+        void annulationShouldSucceedForManagerAndStoreMotifInHistorique() {
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken("manager1", "n/a",
+                                                java.util.List.of(() -> "ROLE_MANAGER")));
+                Intervention entity = intervention("INT-2026-000012", StatutIntervention.DIAGNOSTIC_EN_COURS, true,
+                                null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+                when(interventionRepository.save(any(Intervention.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(interventionMapper.toResponse(any(Intervention.class))).thenReturn(
+                                new InterventionResponse(entity.getNumero(), null, null, entity.getType(),
+                                                entity.getDescriptionClient(),
+                                                entity.getDiagnostic(), StatutIntervention.ANNULEE,
+                                                entity.getPriorite(),
+                                                entity.getCoutEstime(), entity.getDateDepot(),
+                                                entity.getDateRestitutionPrevue(),
+                                                entity.getDateCloture(), entity.isActif(), false));
+
+                workflowService.transition(entity.getNumero(),
+                                new TransitionRequest(StatutIntervention.ANNULEE,
+                                                null,
+                                                null,
+                                                null,
+                                                "Demande client"));
+
+                assertEquals(StatutIntervention.ANNULEE, entity.getStatut());
+                assertEquals(1, entity.getHistoriques().size());
+                assertEquals("Demande client", entity.getHistoriques().get(0).getCommentaire());
+        }
+
+        @Test
+        void annulationShouldRejectWhenSourceNotAllowed() {
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken("manager1", "n/a",
+                                                java.util.List.of(() -> "ROLE_MANAGER")));
+                Intervention entity = intervention("INT-2026-000013", StatutIntervention.EN_REPARATION, true, null);
+                when(interventionRepository.findByNumero(entity.getNumero())).thenReturn(Optional.of(entity));
+
+                assertThrows(TransitionIllegaleException.class,
+                                () -> workflowService.transition(entity.getNumero(),
+                                                new TransitionRequest(StatutIntervention.ANNULEE,
+                                                                null,
+                                                                null,
+                                                                null,
+                                                                "Demande client")));
+
+                verify(interventionRepository, never()).save(any());
+        }
 }

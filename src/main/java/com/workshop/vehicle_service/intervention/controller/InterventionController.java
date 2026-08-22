@@ -33,150 +33,185 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/interventions")
 @RequiredArgsConstructor
-@Tag(name = "Interventions", description = "CRUD de base des interventions")
+@Tag(name = "Interventions", description = "CRUD de base des interventions & Workflow des statuts & Historique")
 public class InterventionController {
 
-    private final InterventionService interventionService;
-    private final WorkflowService workflowService;
-    private final HistoriqueInterventionService historiqueInterventionService;
+        private final InterventionService interventionService;
+        private final WorkflowService workflowService;
+        private final HistoriqueInterventionService historiqueInterventionService;
 
-    @Operation(summary = "Créer une intervention liée à un véhicule (statut initial RECUE, numero auto-généré)")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Intervention créée", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Body invalide"),
-            @ApiResponse(responseCode = "404", description = "Véhicule introuvable"),
-            @ApiResponse(responseCode = "422", description = "Véhicule inactif"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié")
-    })
-    @PostMapping
-    public ResponseEntity<InterventionResponse> create(@Valid @RequestBody InterventionCreateRequest request) {
-        InterventionResponse response = interventionService.create(request);
-        return ResponseEntity.created(URI.create("/api/interventions/" + response.numero())).body(response);
-    }
+        @Operation(summary = "Créer une intervention liée à un véhicule (statut initial RECUE, numero auto-généré)")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "201", description = "Intervention créée", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
+                        @ApiResponse(responseCode = "400", description = "Body invalide"),
+                        @ApiResponse(responseCode = "404", description = "Véhicule introuvable"),
+                        @ApiResponse(responseCode = "422", description = "Véhicule inactif"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @PostMapping
+        public ResponseEntity<InterventionResponse> create(@Valid @RequestBody InterventionCreateRequest request) {
+                InterventionResponse response = interventionService.create(request);
+                return ResponseEntity.created(URI.create("/api/interventions/" + response.numero())).body(response);
+        }
 
-    @Operation(summary = "Consulter une intervention par son numero")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Intervention trouvée", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié")
-    })
-    @GetMapping("/{numero}")
-    public ResponseEntity<InterventionResponse> getByNumero(
-            @PathVariable @Parameter(description = "Numero au format INT-AAAA-NNNNNN") String numero) {
-        return ResponseEntity.ok(interventionService.findByNumero(numero));
-    }
+        @Operation(summary = "Consulter une intervention par son numero")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Intervention trouvée", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
+                        @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @GetMapping("/{numero}")
+        public ResponseEntity<InterventionResponse> getByNumero(
+                        @PathVariable @Parameter(description = "Numero au format INT-AAAA-NNNNNN") String numero) {
+                return ResponseEntity.ok(interventionService.findByNumero(numero));
+        }
 
-    @Operation(summary = "Lister les interventions actives (paginé)")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Page d'interventions actives"),
-            @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié")
-    })
-    @GetMapping
-    public ResponseEntity<Page<InterventionResponse>> list(
-            @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(interventionService.list(pageable));
-    }
+        @Operation(summary = "Lister les interventions actives avec filtres optionnels et indicateur de retard")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Page d'interventions actives"),
+                        @ApiResponse(responseCode = "400", description = "Paramètres de filtre, pagination ou tri invalides"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @GetMapping
+        public ResponseEntity<Page<InterventionResponse>> list(
+                        @RequestParam(required = false) StatutIntervention statut,
+                        @RequestParam(required = false) Long mecanicienId,
+                        @RequestParam(required = false) Long vehiculeId,
+                        @RequestParam(required = false) String immatriculation,
+                        @RequestParam(required = false) String q,
+                        @RequestParam(required = false) Boolean enRetard,
+                        @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
+                return ResponseEntity.ok(interventionService.list(
+                                new InterventionListFilter(statut, mecanicienId, vehiculeId, immatriculation, q,
+                                                enRetard),
+                                pageable));
+        }
 
-    @Operation(summary = "Éditer les champs de base d'une intervention")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Intervention mise à jour", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Body invalide"),
-            @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
-            @ApiResponse(responseCode = "409", description = "Intervention désactivée"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié")
-    })
-    @PutMapping("/{numero}")
-    public ResponseEntity<InterventionResponse> update(@PathVariable String numero,
-            @Valid @RequestBody InterventionUpdateRequest request) {
-        return ResponseEntity.ok(interventionService.update(numero, request));
-    }
+        @Operation(summary = "Exporter en CSV les interventions filtrées")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "CSV généré"),
+                        @ApiResponse(responseCode = "400", description = "Paramètres de filtre invalides"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @GetMapping(value = "/export", produces = "text/csv")
+        public ResponseEntity<String> export(
+                        @RequestParam(required = false) StatutIntervention statut,
+                        @RequestParam(required = false) Long mecanicienId,
+                        @RequestParam(required = false) Long vehiculeId,
+                        @RequestParam(required = false) String immatriculation,
+                        @RequestParam(required = false) String q,
+                        @RequestParam(required = false) Boolean enRetard) {
+                String csv = interventionService.exportCsv(
+                                new InterventionListFilter(statut, mecanicienId, vehiculeId, immatriculation, q,
+                                                enRetard));
+                return ResponseEntity.ok()
+                                .contentType(MediaType.parseMediaType("text/csv"))
+                                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"interventions.csv\"")
+                                .body(csv);
+        }
 
-    @Operation(summary = "Suppression logique (soft delete, actif=false) — idempotente")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Intervention désactivée (ou déjà désactivée)"),
-            @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié")
-    })
-    @DeleteMapping("/{numero}")
-    public ResponseEntity<Void> delete(@PathVariable String numero) {
-        interventionService.delete(numero);
-        return ResponseEntity.noContent().build();
-    }
+        @Operation(summary = "Éditer les champs métier autorisés selon le statut courant")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Intervention mise à jour", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
+                        @ApiResponse(responseCode = "400", description = "Body invalide"),
+                        @ApiResponse(responseCode = "422", description = "Champ non autorisé pour le statut courant"),
+                        @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
+                        @ApiResponse(responseCode = "409", description = "Intervention désactivée ou conflit métier"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @PutMapping("/{numero}")
+        public ResponseEntity<InterventionResponse> update(@PathVariable String numero,
+                        @Valid @RequestBody InterventionUpdateRequest request) {
+                return ResponseEntity.ok(interventionService.update(numero, request));
+        }
 
-    @Operation(summary = "Faire progresser le statut d'une intervention")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Statut mis à jour", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Transition illégale ou prérequis manquant"),
-            @ApiResponse(responseCode = "403", description = "Restitution non autorisée"),
-            @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
-            @ApiResponse(responseCode = "409", description = "Intervention désactivée"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié")
-    })
-    @PostMapping("/{numero}/transitions")
-    public ResponseEntity<InterventionResponse> transition(@PathVariable String numero,
-            @Valid @RequestBody TransitionRequest request) {
-        return ResponseEntity.ok(workflowService.transition(numero, request));
-    }
+        @Operation(summary = "Archivage conditionnel (soft delete, actif=false) — statuts terminaux uniquement")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "204", description = "Intervention désactivée (ou déjà désactivée)"),
+                        @ApiResponse(responseCode = "409", description = "Archivage interdit pour le statut courant"),
+                        @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @DeleteMapping("/{numero}")
+        public ResponseEntity<Void> delete(@PathVariable String numero) {
+                interventionService.delete(numero);
+                return ResponseEntity.noContent().build();
+        }
 
-    @Operation(summary = "Affecter un mécanicien à une intervention")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Mécanicien affecté", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Body invalide"),
-            @ApiResponse(responseCode = "403", description = "Accès réservé au manager"),
-            @ApiResponse(responseCode = "404", description = "Intervention ou mécanicien introuvable"),
-            @ApiResponse(responseCode = "409", description = "Intervention désactivée"),
-            @ApiResponse(responseCode = "422", description = "Mécanicien inactif"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié")
-    })
-    @PatchMapping("/{numero}/mecanicien")
-    @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<InterventionResponse> affecterMecanicien(@PathVariable String numero,
-            @Valid @RequestBody MecanicienAffectationRequest request) {
-        return ResponseEntity.ok(workflowService.affecterMecanicien(numero, request));
-    }
+        @Operation(summary = "Faire progresser le statut d'une intervention avec validations conditionnelles")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Statut mis à jour", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
+                        @ApiResponse(responseCode = "409", description = "Transition illégale pour le statut courant"),
+                        @ApiResponse(responseCode = "422", description = "Pré-requis métier manquant ou invalide"),
+                        @ApiResponse(responseCode = "403", description = "Restitution ou annulation non autorisée"),
+                        @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @PostMapping("/{numero}/transitions")
+        public ResponseEntity<InterventionResponse> transition(@PathVariable String numero,
+                        @Valid @RequestBody TransitionRequest request) {
+                return ResponseEntity.ok(workflowService.transition(numero, request));
+        }
 
-    @Operation(summary = "Consulter la timeline d'une intervention")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Historique paginé"),
-            @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
-            @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié")
-    })
-    @GetMapping("/{numero}/historique")
-    public ResponseEntity<Page<HistoriqueInterventionResponse>> getHistorique(@PathVariable String numero,
-            @PageableDefault(size = 20, sort = "date", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(historiqueInterventionService.findByInterventionNumero(numero, pageable));
-    }
+        @Operation(summary = "Affecter un mécanicien à une intervention")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Mécanicien affecté", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
+                        @ApiResponse(responseCode = "400", description = "Body invalide"),
+                        @ApiResponse(responseCode = "403", description = "Accès réservé au manager"),
+                        @ApiResponse(responseCode = "404", description = "Intervention ou mécanicien introuvable"),
+                        @ApiResponse(responseCode = "409", description = "Intervention désactivée"),
+                        @ApiResponse(responseCode = "422", description = "Mécanicien inactif"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @PatchMapping("/{numero}/mecanicien")
+        @PreAuthorize("hasRole('MANAGER')")
+        public ResponseEntity<InterventionResponse> affecterMecanicien(@PathVariable String numero,
+                        @Valid @RequestBody MecanicienAffectationRequest request) {
+                return ResponseEntity.ok(workflowService.affecterMecanicien(numero, request));
+        }
 
-    @Operation(summary = "Lister les autres interventions actives du même véhicule")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Related list paginée"),
-            @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
-            @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié")
-    })
-    @GetMapping("/{numero}/autres-interventions-vehicule")
-    public ResponseEntity<Page<InterventionResponse>> getAutresInterventionsVehicule(@PathVariable String numero,
-            @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(interventionService.findAutresInterventionsDuVehicule(numero, pageable));
-    }
+        @Operation(summary = "Consulter la timeline complète d'une intervention avec transition, auteur, date et motif éventuel")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Historique paginé"),
+                        @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
+                        @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @GetMapping("/{numero}/historique")
+        public ResponseEntity<Page<HistoriqueInterventionResponse>> getHistorique(@PathVariable String numero,
+                        @PageableDefault(size = 20, sort = "date", direction = Sort.Direction.ASC) Pageable pageable) {
+                return ResponseEntity.ok(historiqueInterventionService.findByInterventionNumero(numero, pageable));
+        }
 
-    @Operation(summary = "Lister les interventions actives (non archivées) affectées à un mécanicien")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Page d'interventions du mécanicien"),
-            @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
-            @ApiResponse(responseCode = "404", description = "Mécanicien introuvable"),
-            @ApiResponse(responseCode = "401", description = "Non authentifié")
-    })
-    @GetMapping("/mecanicien/{mecanicienId}")
-    public ResponseEntity<Page<InterventionResponse>> getByMecanicien(@PathVariable Long mecanicienId,
-            @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(interventionService.findByMecanicien(mecanicienId, pageable));
-    }
+        @Operation(summary = "Lister les autres interventions actives du même véhicule")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Related list paginée"),
+                        @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
+                        @ApiResponse(responseCode = "404", description = "Intervention introuvable"),
+                        @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @GetMapping("/{numero}/autres-interventions-vehicule")
+        public ResponseEntity<Page<InterventionResponse>> getAutresInterventionsVehicule(@PathVariable String numero,
+                        @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
+                return ResponseEntity.ok(interventionService.findAutresInterventionsDuVehicule(numero, pageable));
+        }
+
+        @Operation(summary = "Lister les interventions actives (non archivées) affectées à un mécanicien")
+        @ApiResponses(value = {
+                @ApiResponse(responseCode = "200", description = "Page d'interventions du mécanicien"),
+                @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
+                @ApiResponse(responseCode = "404", description = "Mécanicien introuvable"),
+                @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @GetMapping("/mecanicien/{mecanicienId}")
+        public ResponseEntity<Page<InterventionResponse>> getByMecanicien(@PathVariable Long mecanicienId,
+                                                                          @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
+                return ResponseEntity.ok(interventionService.findByMecanicien(mecanicienId, pageable));
+        }
 }
