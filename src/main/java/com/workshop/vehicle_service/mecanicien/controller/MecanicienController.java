@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -62,6 +63,44 @@ public class MecanicienController {
     public ResponseEntity<Page<MecanicienResponse>> list(
             @PageableDefault(size = 20, sort = "nom", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(mecanicienService.list(pageable));
+    }
+
+    @Operation(summary = "Lister les mécaniciens actifs et disponibles (paginé)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Page de mécaniciens actifs disponibles"),
+            @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
+            @ApiResponse(responseCode = "401", description = "Non authentifié")
+    })
+    @GetMapping("/disponibles")
+    public ResponseEntity<Page<MecanicienResponse>> listDisponibles(
+            @PageableDefault(size = 20, sort = "nom", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(mecanicienService.listDisponibles(pageable));
+    }
+
+    @Operation(summary = "Lister les mécaniciens actifs et indisponibles (paginé)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Page de mécaniciens actifs indisponibles"),
+            @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
+            @ApiResponse(responseCode = "401", description = "Non authentifié")
+    })
+    @GetMapping("/indisponibles")
+    public ResponseEntity<Page<MecanicienResponse>> listIndisponibles(
+            @PageableDefault(size = 20, sort = "nom", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(mecanicienService.listIndisponibles(pageable));
+    }
+
+    @Operation(summary = "Rechercher les mécaniciens actifs par nom et/ou spécialité (paginé)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Page de mécaniciens correspondant à la recherche"),
+            @ApiResponse(responseCode = "400", description = "Paramètres de recherche ou de pagination invalides"),
+            @ApiResponse(responseCode = "401", description = "Non authentifié")
+    })
+    @GetMapping("/recherche")
+    public ResponseEntity<Page<MecanicienResponse>> search(
+            @RequestParam(required = false) String nom,
+            @RequestParam(required = false) String specialite,
+            @PageableDefault(size = 20, sort = "nom", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(mecanicienService.search(nom, specialite, pageable));
     }
 
     @Operation(summary = "Consulter un mécanicien par son id (actif ou inactif)")
@@ -107,10 +146,11 @@ public class MecanicienController {
         return ResponseEntity.ok(mecanicienService.updateDisponibilite(id, request));
     }
 
-    @Operation(summary = "Désactivation logique (soft delete, actif=false) — idempotente")
+    @Operation(summary = "Désactivation logique (soft delete, actif=false) — idempotente, refusée si intervention active non terminale")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Mécanicien désactivé (ou déjà désactivé)"),
             @ApiResponse(responseCode = "404", description = "Mécanicien introuvable"),
+            @ApiResponse(responseCode = "409", description = "Le mécanicien possède au moins une intervention active dont le statut n'est pas final"),
             @ApiResponse(responseCode = "401", description = "Non authentifié"),
             @ApiResponse(responseCode = "403", description = "Accès réservé au manager")
     })

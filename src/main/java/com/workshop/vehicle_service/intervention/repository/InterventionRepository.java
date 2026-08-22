@@ -77,4 +77,11 @@ public interface InterventionRepository
 
         long getTotal();
     }
+
+    /** Interventions actives (non archivées) affectées à un mécanicien donné, paginé. */
+    Page<Intervention> findByMecanicienIdAndActifTrue(Long mecanicienId, Pageable pageable);
+
+    /** Vrai si le mécanicien possède au moins une intervention active dont le statut n'est pas final. */
+    boolean existsByMecanicienIdAndActifTrueAndStatutNotIn(Long mecanicienId,
+                                                           Collection<StatutIntervention> statutsFinaux);
 }

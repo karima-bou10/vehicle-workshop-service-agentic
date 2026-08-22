@@ -2,12 +2,7 @@ package com.workshop.vehicle_service.intervention.controller;
 
 import com.workshop.vehicle_service.historique.dto.HistoriqueInterventionResponse;
 import com.workshop.vehicle_service.historique.service.HistoriqueInterventionService;
-import com.workshop.vehicle_service.intervention.dto.InterventionCreateRequest;
-import com.workshop.vehicle_service.intervention.dto.InterventionListFilter;
-import com.workshop.vehicle_service.intervention.dto.MecanicienAffectationRequest;
-import com.workshop.vehicle_service.intervention.dto.InterventionResponse;
-import com.workshop.vehicle_service.intervention.dto.TransitionRequest;
-import com.workshop.vehicle_service.intervention.dto.InterventionUpdateRequest;
+import com.workshop.vehicle_service.intervention.dto.*;
 import com.workshop.vehicle_service.intervention.enums.StatutIntervention;
 import com.workshop.vehicle_service.intervention.service.InterventionService;
 import com.workshop.vehicle_service.intervention.service.WorkflowService;
@@ -204,5 +199,18 @@ public class InterventionController {
         public ResponseEntity<Page<InterventionResponse>> getAutresInterventionsVehicule(@PathVariable String numero,
                         @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
                 return ResponseEntity.ok(interventionService.findAutresInterventionsDuVehicule(numero, pageable));
+        }
+
+        @Operation(summary = "Lister les interventions actives (non archivées) affectées à un mécanicien")
+        @ApiResponses(value = {
+                @ApiResponse(responseCode = "200", description = "Page d'interventions du mécanicien"),
+                @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
+                @ApiResponse(responseCode = "404", description = "Mécanicien introuvable"),
+                @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @GetMapping("/mecanicien/{mecanicienId}")
+        public ResponseEntity<Page<InterventionResponse>> getByMecanicien(@PathVariable Long mecanicienId,
+                                                                          @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
+                return ResponseEntity.ok(interventionService.findByMecanicien(mecanicienId, pageable));
         }
 }

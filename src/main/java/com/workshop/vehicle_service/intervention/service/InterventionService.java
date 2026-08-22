@@ -76,4 +76,9 @@ public interface InterventionService {
      * point par jour, sans trou.
      */
     List<JourCompte> volumeRecuesParJour(LocalDate debut, LocalDate finInclusive);
+
+    Page<InterventionResponse> findByMecanicien(Long mecanicienId, Pageable pageable);
+
+    /** Vrai si le mécanicien possède au moins une intervention active dont le statut n'est pas final. */
+    boolean hasInterventionsActivesNonFinales(Long mecanicienId);
 }

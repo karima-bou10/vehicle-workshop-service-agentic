@@ -17,6 +17,7 @@ import com.workshop.vehicle_service.intervention.repository.InterventionReposito
 import com.workshop.vehicle_service.intervention.repository.InterventionSpecifications;
 import com.workshop.vehicle_service.intervention.service.InterventionNumeroGenerator;
 import com.workshop.vehicle_service.intervention.service.InterventionService;
+import com.workshop.vehicle_service.mecanicien.service.MecanicienService;
 import com.workshop.vehicle_service.vehicule.entity.Vehicule;
 import com.workshop.vehicle_service.vehicule.service.VehiculeService;
 import java.time.LocalDate;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -54,8 +56,12 @@ public class InterventionServiceImpl implements InterventionService {
     private static final List<StatutIntervention> STATUTS_EXCLUS_RETARD = List.of(
             StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
 
+    private static final Set<StatutIntervention> STATUTS_FINAUX = Set.of(
+            StatutIntervention.TERMINEE, StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
+
     private final InterventionRepository interventionRepository;
     private final VehiculeService vehiculeService;
+    private final MecanicienService mecanicienService;
     private final InterventionNumeroGenerator numeroGenerator;
     private final InterventionMapper interventionMapper;
 
@@ -251,6 +257,22 @@ public class InterventionServiceImpl implements InterventionService {
             serie.add(new JourCompte(jour, parJour.getOrDefault(jour, 0L)));
         }
         return serie;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<InterventionResponse> findByMecanicien(Long mecanicienId, Pageable pageable) {
+        validatePageable(pageable);
+        // Vérifie l'existence du mécanicien (actif ou non) — 404 sinon.
+        mecanicienService.findById(mecanicienId);
+        return interventionRepository.findByMecanicienIdAndActifTrue(mecanicienId, pageable)
+                .map(interventionMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasInterventionsActivesNonFinales(Long mecanicienId) {
+        return interventionRepository.existsByMecanicienIdAndActifTrueAndStatutNotIn(mecanicienId, STATUTS_FINAUX);
     }
 
     private Intervention getEntityByNumero(String numero) {
