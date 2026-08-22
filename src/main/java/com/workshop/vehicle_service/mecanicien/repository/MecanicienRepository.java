@@ -24,7 +24,7 @@ public interface MecanicienRepository extends JpaRepository<Mecanicien, Long> {
      * sont optionnels (null = pas de filtre) et combinés en ET.
      */
     @Query("SELECT m FROM Mecanicien m WHERE m.actif = true "
-            + "AND (:nom IS NULL OR LOWER(m.nom) LIKE CONCAT('%', :nom, '%')) "
+            + "AND LOWER(m.nom) LIKE CONCAT('%', :nom, '%') "
             + "AND (:specialite IS NULL OR UPPER(m.specialite) = :specialite)")
     Page<Mecanicien> search(@Param("nom") String nom, @Param("specialite") String specialite, Pageable pageable);
 }

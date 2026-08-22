@@ -138,9 +138,7 @@ public class MecanicienServiceImpl implements MecanicienService {
     @Transactional(readOnly = true)
     public Page<MecanicienResponse> search(String nom, String specialite, Pageable pageable) {
         validatePageable(pageable);
-        //String nomNormalise = StringUtils.hasText(nom) ? nom.trim() : null;
-
-        String nomNormalise = StringUtils.hasText(nom) ? nom.trim().toLowerCase(Locale.ROOT) : null;
+        String nomNormalise = StringUtils.hasText(nom) ? nom.trim().toLowerCase(Locale.ROOT) : "";
         String specialiteNormalisee = normaliserSpecialite(specialite);
 
         return mecanicienRepository.search(nomNormalise, specialiteNormalisee, pageable)
@@ -152,7 +150,7 @@ public class MecanicienServiceImpl implements MecanicienService {
             return null;
         }
         try {
-            return Specialite.valueOf(specialite.trim().toUpperCase()).name();
+            return Specialite.valueOf(specialite.trim().toUpperCase(Locale.ROOT)).name();
         } catch (IllegalArgumentException ex) {
             throw new IllegalArgumentException("Spécialité invalide : " + specialite);
         }
