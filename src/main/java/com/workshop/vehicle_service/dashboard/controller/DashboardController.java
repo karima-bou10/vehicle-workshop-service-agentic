@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import com.workshop.vehicle_service.dashboard.dto.MecanicienSyntheseResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -97,5 +98,17 @@ public class DashboardController {
             @RequestParam(defaultValue = "30")
             @Parameter(description = "Taille de la fenêtre glissante en jours (1 à 366), aujourd'hui inclus") int jours) {
         return ResponseEntity.ok(dashboardService.getVolume(jours));
+    }
+
+    @Operation(summary = "Synthèse paginée par mécanicien actif")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Page de synthèses par mécanicien"),
+            @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
+            @ApiResponse(responseCode = "401", description = "Non authentifié")
+    })
+    @GetMapping("/mecaniciens/synthese")
+    public ResponseEntity<Page<MecanicienSyntheseResponse>> getSyntheseMecaniciens(
+            @PageableDefault(size = 10, sort = "nom") Pageable pageable) {
+        return ResponseEntity.ok(dashboardService.getSyntheseMecaniciens(pageable));
     }
 }

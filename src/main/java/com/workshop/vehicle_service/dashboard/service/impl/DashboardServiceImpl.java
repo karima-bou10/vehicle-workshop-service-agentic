@@ -14,6 +14,10 @@ import com.workshop.vehicle_service.intervention.enums.TypeIntervention;
 import com.workshop.vehicle_service.intervention.service.InterventionService;
 import com.workshop.vehicle_service.mecanicien.dto.MecanicienResponse;
 import com.workshop.vehicle_service.mecanicien.service.MecanicienService;
+import com.workshop.vehicle_service.dashboard.dto.MecanicienSyntheseResponse;
+import org.springframework.data.domain.PageImpl;
+import java.util.stream.Collectors;
+import java.util.Map;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +48,39 @@ public class DashboardServiceImpl implements DashboardService {
                 interventionService.countEnStatut(StatutIntervention.EN_REPARATION),
                 interventionService.countEnStatut(StatutIntervention.TERMINEE),
                 interventionService.countRetards());
+    }
+
+    @Override
+    public Page<MecanicienSyntheseResponse> getSyntheseMecaniciens(Pageable pageable) {
+        var mecanicienPage = mecanicienService.list(pageable);
+
+        // Aggregations from intervention service (single calls to avoid N+1)
+        Map<Long, Long> chargeParMecanicien = interventionService.chargeActiveParMecanicien();
+        Map<Long, Long> retardsParMecanicien = interventionService.countRetardsParMecanicien();
+        Map<Long, Map<StatutIntervention, Long>> parMecanicienEtStatut = interventionService.countActifsGroupeParMecanicienEtStatut();
+        Map<Long, Double> delaiMoyenHeures = interventionService.delaiMoyenTraitementParMecanicien();
+
+        var content = mecanicienPage.getContent().stream().map(m -> {
+            long enCours = chargeParMecanicien.getOrDefault(m.id(), 0L);
+            Map<StatutIntervention, Long> perStatut = parMecanicienEtStatut.getOrDefault(m.id(), Map.of());
+            long enReparation = perStatut.getOrDefault(StatutIntervention.EN_REPARATION, 0L);
+            long terminees = perStatut.getOrDefault(StatutIntervention.TERMINEE, 0L);
+            long enRetard = retardsParMecanicien.getOrDefault(m.id(), 0L);
+            Double delaiHeures = delaiMoyenHeures.get(m.id());
+
+            return new MecanicienSyntheseResponse(
+                    m.id(),
+                    m.nom(),
+                    m.specialite(),
+                    m.disponible(),
+                    enCours,
+                    enReparation,
+                    terminees,
+                    enRetard,
+                    delaiHeures);
+        }).collect(Collectors.toList());
+
+        return new PageImpl<>(content, pageable, mecanicienPage.getTotalElements());
     }
 
     @Override
