@@ -27,13 +27,16 @@ public interface InterventionService {
 
     void delete(String numero);
 
+    Page<InterventionResponse> findByMecanicien(Long mecanicienId, Pageable pageable);
+
+    /** Vrai si le mécanicien possède au moins une intervention active dont le statut n'est pas final. */
+    boolean hasInterventionsActivesNonFinales(Long mecanicienId);
+
     Page<InterventionResponse> findAutresInterventionsDuVehicule(String numero, Pageable pageable);
 
     // --- Lecture agrégée pour le dashboard (§3.6) — jamais d'écriture ---
 
-    /**
-     * Interventions actives dont la date de dépôt est le jour calendaire courant.
-     */
+    /** Interventions actives dont la date de dépôt est le jour calendaire courant. */
     long countRecuesAujourdHui();
 
     /** Interventions actives actuellement dans le statut donné. */
@@ -46,22 +49,13 @@ public interface InterventionService {
      */
     long countRetards();
 
-    /**
-     * Liste paginée des interventions en retard (même règle que
-     * {@link #countRetards()}).
-     */
+    /** Liste paginée des interventions en retard (même règle que {@link #countRetards()}). */
     Page<InterventionResponse> findRetards(Pageable pageable);
 
-    /**
-     * Répartition du nombre d'interventions actives par statut (clés présentes
-     * uniquement si total > 0).
-     */
+    /** Répartition du nombre d'interventions actives par statut (clés présentes uniquement si total > 0). */
     Map<StatutIntervention, Long> countParStatut();
 
-    /**
-     * Répartition du nombre d'interventions actives par type (clés présentes
-     * uniquement si total > 0).
-     */
+    /** Répartition du nombre d'interventions actives par type (clés présentes uniquement si total > 0). */
     Map<TypeIntervention, Long> countParType();
 
     /**
@@ -71,14 +65,15 @@ public interface InterventionService {
      */
     Map<Long, Long> chargeActiveParMecanicien();
 
-    /**
-     * Série journalière des interventions reçues sur [debut, finInclusive], un
-     * point par jour, sans trou.
-     */
+    /** Compte des interventions en retard par mécanicien (id mécanicien -> total). */
+    Map<Long, Long> countRetardsParMecanicien();
+
+    /** Répartition par mécanicien et statut (mecanicienId -> (statut -> total)). */
+    Map<Long, Map<StatutIntervention, Long>> countActifsGroupeParMecanicienEtStatut();
+
+    /** Délai moyen de traitement (en heures) par mécanicien pour les interventions RESTITUEE. */
+    Map<Long, Double> delaiMoyenTraitementParMecanicien();
+
+    /** Série journalière des interventions reçues sur [debut, finInclusive], un point par jour, sans trou. */
     List<JourCompte> volumeRecuesParJour(LocalDate debut, LocalDate finInclusive);
-
-    Page<InterventionResponse> findByMecanicien(Long mecanicienId, Pageable pageable);
-
-    /** Vrai si le mécanicien possède au moins une intervention active dont le statut n'est pas final. */
-    boolean hasInterventionsActivesNonFinales(Long mecanicienId);
 }
