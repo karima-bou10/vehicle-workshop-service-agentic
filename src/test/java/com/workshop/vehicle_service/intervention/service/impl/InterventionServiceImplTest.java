@@ -198,7 +198,7 @@ class InterventionServiceImplTest {
                         false));
 
         InterventionUpdateRequest request = new InterventionUpdateRequest(TypeIntervention.CONTROLE,
-                "Nouvelle description", PrioriteIntervention.HAUTE, LocalDateTime.now());
+                "Nouvelle description", PrioriteIntervention.HAUTE, LocalDateTime.now(), null, null, null);
 
         interventionService.update("INT-2026-000001", request);
 
@@ -215,7 +215,7 @@ class InterventionServiceImplTest {
         when(interventionRepository.findByNumero("INT-2026-000002")).thenReturn(Optional.of(intervention));
 
         InterventionUpdateRequest request = new InterventionUpdateRequest(TypeIntervention.CONTROLE, "desc",
-                PrioriteIntervention.BASSE, LocalDateTime.now());
+                PrioriteIntervention.BASSE, LocalDateTime.now(), null, null, null);
 
         assertThrows(InterventionInactiveException.class, () -> interventionService.update("INT-2026-000002", request));
         verify(interventionRepository, never()).save(any());
@@ -226,7 +226,7 @@ class InterventionServiceImplTest {
         when(interventionRepository.findByNumero("INT-2026-999999")).thenReturn(Optional.empty());
 
         InterventionUpdateRequest request = new InterventionUpdateRequest(TypeIntervention.CONTROLE, "desc",
-                PrioriteIntervention.BASSE, LocalDateTime.now());
+                PrioriteIntervention.BASSE, LocalDateTime.now(), null, null, null);
 
         assertThrows(InterventionIntrouvableException.class,
                 () -> interventionService.update("INT-2026-999999", request));
@@ -333,7 +333,7 @@ class InterventionServiceImplTest {
         InterventionUpdateRequest request = new InterventionUpdateRequest(TypeIntervention.CONTROLE,
                 "desc",
                 PrioriteIntervention.HAUTE,
-                LocalDateTime.of(2026, 1, 1, 10, 0));
+                LocalDateTime.of(2026, 1, 1, 10, 0), null, null, null);
 
         assertThrows(ModificationInterventionNonAutoriseeException.class,
                 () -> interventionService.update("INT-2026-000050", request));
@@ -360,7 +360,7 @@ class InterventionServiceImplTest {
         InterventionUpdateRequest request = new InterventionUpdateRequest(TypeIntervention.REPARATION,
                 "desc nouvelle",
                 PrioriteIntervention.NORMALE,
-                depot);
+                depot, null, null, null);
 
         assertThrows(ModificationInterventionNonAutoriseeException.class,
                 () -> interventionService.update("INT-2026-000051", request));
