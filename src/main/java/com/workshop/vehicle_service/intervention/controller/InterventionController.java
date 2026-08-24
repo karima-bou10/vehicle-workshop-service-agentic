@@ -92,6 +92,29 @@ public class InterventionController {
                                 pageable));
         }
 
+        @Operation(summary = "Exporter en CSV les interventions filtrées")
+        @ApiResponses(value = {
+                @ApiResponse(responseCode = "200", description = "CSV généré"),
+                @ApiResponse(responseCode = "400", description = "Paramètres de filtre invalides"),
+                @ApiResponse(responseCode = "401", description = "Non authentifié")
+        })
+        @GetMapping(value = "/export", produces = "text/csv")
+        public ResponseEntity<String> export(
+                @RequestParam(required = false) StatutIntervention statut,
+                @RequestParam(required = false) Long mecanicienId,
+                @RequestParam(required = false) Long vehiculeId,
+                @RequestParam(required = false) String immatriculation,
+                @RequestParam(required = false) String q,
+                @RequestParam(required = false) Boolean enRetard) {
+                String csv = interventionService.exportCsv(
+                        new InterventionListFilter(statut, mecanicienId, vehiculeId, immatriculation, q,
+                                enRetard));
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType("text/csv"))
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"interventions.csv\"")
+                        .body(csv);
+        }
+
         @Operation(summary = "Éditer les champs métier autorisés selon le statut courant")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Intervention mise à jour", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),

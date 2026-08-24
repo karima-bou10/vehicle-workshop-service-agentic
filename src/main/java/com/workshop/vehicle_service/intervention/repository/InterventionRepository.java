@@ -10,10 +10,13 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface InterventionRepository extends JpaRepository<Intervention, Long> {
+public interface InterventionRepository
+        extends JpaRepository<Intervention, Long>, JpaSpecificationExecutor<Intervention> {
+
     Page<Intervention> findByVehiculeId(Long vehiculeId, Pageable pageable);
 
     Page<Intervention> findByMecanicienId(Long mecanicienId, Pageable pageable);

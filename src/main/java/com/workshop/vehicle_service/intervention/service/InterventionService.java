@@ -19,8 +19,9 @@ public interface InterventionService {
 
     InterventionResponse findByNumero(String numero);
 
-    Page<InterventionResponse> list(Pageable pageable);
     Page<InterventionResponse> list(InterventionListFilter filter, Pageable pageable);
+
+    String exportCsv(InterventionListFilter filter);
 
     InterventionResponse update(String numero, InterventionUpdateRequest request);
 
@@ -28,6 +29,7 @@ public interface InterventionService {
 
     Page<InterventionResponse> findByMecanicien(Long mecanicienId, Pageable pageable);
 
+    /** Vrai si le mécanicien possède au moins une intervention active dont le statut n'est pas final. */
     boolean hasInterventionsActivesNonFinales(Long mecanicienId);
 
     Page<InterventionResponse> findAutresInterventionsDuVehicule(String numero, Pageable pageable);
