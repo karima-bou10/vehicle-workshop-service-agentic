@@ -158,6 +158,9 @@ public class InterventionServiceImpl implements InterventionService {
         intervention.setDescriptionClient(request.descriptionClient());
         intervention.setPriorite(request.priorite());
         intervention.setDateDepot(request.dateDepot());
+        intervention.setCoutEstime(request.coutEstime());
+        intervention.setDateRestitutionPrevue(request.dateRestitutionPrevue());
+        intervention.setDiagnostic(request.diagnostic());
 
         Intervention saved = interventionRepository.save(intervention);
         return toResponse(saved, LocalDateTime.now());
@@ -314,6 +317,23 @@ public class InterventionServiceImpl implements InterventionService {
             throw new ModificationInterventionNonAutoriseeException(
                     "Le champ dateDepot est modifiable uniquement au statut RECUE");
         }
+        if (statut != StatutIntervention.DEVIS_A_VALIDER
+                && !Objects.equals(request.dateRestitutionPrevue(), intervention.getDateRestitutionPrevue())) {
+            throw new ModificationInterventionNonAutoriseeException(
+                    "Le champ dateRestitutionPrevue est modifiable uniquement au statut devis à valider");
+        }
+
+        if (statut != StatutIntervention.DEVIS_A_VALIDER
+                && !Objects.equals(request.coutEstime(), intervention.getCoutEstime())) {
+            throw new ModificationInterventionNonAutoriseeException(
+                    "Le champ coutEstime est modifiable uniquement au statut devis à valider");
+        }
+        if (statut != StatutIntervention.DIAGNOSTIC_EN_COURS && statut != StatutIntervention.DEVIS_A_VALIDER
+                && !Objects.equals(request.diagnostic(), intervention.getDiagnostic())) {
+            throw new ModificationInterventionNonAutoriseeException(
+                    "Le champ diagnostic est modifiable uniquement au statut devis à valider et diagnostic en cours");
+        }
+
     }
 
     private void validatePageable(Pageable pageable) {

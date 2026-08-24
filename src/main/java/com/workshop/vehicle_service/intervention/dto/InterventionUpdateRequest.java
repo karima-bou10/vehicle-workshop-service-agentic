@@ -4,6 +4,8 @@ import com.workshop.vehicle_service.intervention.enums.PrioriteIntervention;
 import com.workshop.vehicle_service.intervention.enums.TypeIntervention;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -11,8 +13,12 @@ import java.time.LocalDateTime;
  * vehiculeId/numero/statut/mecanicienId/coutEstime/dateCloture/actif.
  */
 public record InterventionUpdateRequest(
-                @NotNull TypeIntervention type,
-                @NotBlank String descriptionClient,
-                @NotNull PrioriteIntervention priorite,
-                @NotNull LocalDateTime dateDepot) {
+        @NotNull TypeIntervention type,
+        @NotBlank String descriptionClient,
+        @NotNull PrioriteIntervention priorite,
+        @NotNull LocalDateTime dateDepot,
+        LocalDateTime dateRestitutionPrevue,
+        String diagnostic,
+        BigDecimal coutEstime) {
+
 }
