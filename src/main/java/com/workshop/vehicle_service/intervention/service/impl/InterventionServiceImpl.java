@@ -1,12 +1,8 @@
 package com.workshop.vehicle_service.intervention.service.impl;
 
-import com.workshop.vehicle_service.common.exception.ArchivageNonAutoriseException;
 import com.workshop.vehicle_service.common.dto.JourCompte;
-import com.workshop.vehicle_service.common.exception.InterventionInactiveException;
-import com.workshop.vehicle_service.common.exception.InterventionIntrouvableException;
-import com.workshop.vehicle_service.common.exception.ModificationInterventionNonAutoriseeException;
+import com.workshop.vehicle_service.common.exception.*;
 import com.workshop.vehicle_service.intervention.dto.InterventionCreateRequest;
-import com.workshop.vehicle_service.intervention.dto.InterventionListFilter;
 import com.workshop.vehicle_service.intervention.dto.InterventionResponse;
 import com.workshop.vehicle_service.intervention.dto.InterventionUpdateRequest;
 import com.workshop.vehicle_service.intervention.entity.Intervention;
@@ -22,37 +18,29 @@ import com.workshop.vehicle_service.vehicule.entity.Vehicule;
 import com.workshop.vehicle_service.vehicule.service.VehiculeService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import com.workshop.vehicle_service.intervention.dto.InterventionListFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class InterventionServiceImpl implements InterventionService {
+public class InterventionServiceImpl implements InterventionService  {
 
     private static final DateTimeFormatter CSV_DATE_TIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static final String CSV_SEPARATOR = ",";
 
-    /**
-     * Statuts considérés comme "clôturés" pour la charge active d'un mécanicien.
-     */
+    /** Statuts considérés comme "clôturés" pour la charge active d'un mécanicien. */
     private static final List<StatutIntervention> STATUTS_CLOTURES = List.of(
             StatutIntervention.TERMINEE, StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
 
-    /**
-     * Statuts jamais considérés en retard, même si la date de restitution prévue
-     * est dépassée.
-     */
+    /** Statuts jamais considérés en retard, même si la date de restitution prévue est dépassée. */
     private static final List<StatutIntervention> STATUTS_EXCLUS_RETARD = List.of(
             StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
 
@@ -119,7 +107,7 @@ public class InterventionServiceImpl implements InterventionService {
 
         StringBuilder csv = new StringBuilder();
         csv.append(
-                "numero,immatriculation,marque,modele,type,statut,priorite,dateDepot,dateRestitutionPrevue,mecanicien,enRetard")
+                        "numero,immatriculation,marque,modele,type,statut,priorite,dateDepot,dateRestitutionPrevue,mecanicien,enRetard")
                 .append(System.lineSeparator());
 
         for (Intervention intervention : interventions) {
@@ -262,22 +250,6 @@ public class InterventionServiceImpl implements InterventionService {
         return serie;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<InterventionResponse> findByMecanicien(Long mecanicienId, Pageable pageable) {
-        validatePageable(pageable);
-        // Vérifie l'existence du mécanicien (actif ou non) — 404 sinon.
-        mecanicienService.findById(mecanicienId);
-        return interventionRepository.findByMecanicienIdAndActifTrue(mecanicienId, pageable)
-                .map(interventionMapper::toResponse);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean hasInterventionsActivesNonFinales(Long mecanicienId) {
-        return interventionRepository.existsByMecanicienIdAndActifTrueAndStatutNotIn(mecanicienId, STATUTS_FINAUX);
-    }
-
     private Intervention getEntityByNumero(String numero) {
         return interventionRepository.findByNumero(numero)
                 .orElseThrow(() -> new InterventionIntrouvableException(
@@ -333,14 +305,12 @@ public class InterventionServiceImpl implements InterventionService {
             throw new ModificationInterventionNonAutoriseeException(
                     "Le champ diagnostic est modifiable uniquement au statut devis à valider et diagnostic en cours");
         }
-
     }
 
     private void validatePageable(Pageable pageable) {
         if (pageable.getPageNumber() < 0 || pageable.getPageSize() < 1 || pageable.getPageSize() > 100) {
             throw new IllegalArgumentException("Paramètres de pagination invalides");
         }
-
     }
 
     private boolean isArchivedStatus(StatutIntervention statut) {
@@ -352,9 +322,8 @@ public class InterventionServiceImpl implements InterventionService {
     }
 
     private String csvValue(String value) {
-        if (value == null) {
+        if (value == null)
             return "";
-        }
 
         String escaped = value.replace("\"", "\"\"");
         if (escaped.contains(CSV_SEPARATOR) || escaped.contains("\"") || escaped.contains("\n")
@@ -362,6 +331,13 @@ public class InterventionServiceImpl implements InterventionService {
             return "\"" + escaped + "\"";
         }
         return escaped;
+    }
+
+    private void validateDates(LocalDateTime dateDepot, LocalDateTime dateRestitutionPrevue) {
+        if (dateDepot != null && dateRestitutionPrevue != null && dateRestitutionPrevue.isBefore(dateDepot)) {
+            throw new DateRestitutionInvalideException(
+                    "dateRestitutionPrevue doit être postérieure ou égale à dateDepot");
+        }
     }
 
     private String typeLibelle(TypeIntervention type) {
@@ -383,5 +359,47 @@ public class InterventionServiceImpl implements InterventionService {
             case "URGENTE" -> "Urgente";
             default -> priorite;
         };
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<InterventionResponse> findByMecanicien(Long mecanicienId, Pageable pageable) {
+        validatePageable(pageable);
+        // Vérifie l'existence du mécanicien (actif ou non) — 404 sinon.
+        mecanicienService.findById(mecanicienId);
+        return interventionRepository.findByMecanicienId(mecanicienId, pageable)
+                .map(interventionMapper::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasInterventionsActivesNonFinales(Long mecanicienId) {
+        Page<Intervention> page = interventionRepository.findByMecanicienId(mecanicienId, Pageable.ofSize(1));
+        return page.stream().anyMatch(i -> i.isActif() && !STATUTS_CLOTURES.contains(i.getStatut()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, Long> countRetardsParMecanicien() {
+        return interventionRepository.countRetardsParMecanicien(LocalDateTime.now(), STATUTS_EXCLUS_RETARD).stream()
+                .collect(Collectors.toMap(InterventionRepository.MecanicienCharge::getMecanicienId,
+                        InterventionRepository.MecanicienCharge::getTotal));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, Map<StatutIntervention, Long>> countActifsGroupeParMecanicienEtStatut() {
+        return interventionRepository.countActifsGroupeParMecanicienEtStatut().stream()
+                .collect(Collectors.groupingBy(InterventionRepository.MecanicienStatutCount::getMecanicienId,
+                        Collectors.toMap(InterventionRepository.MecanicienStatutCount::getStatut,
+                                InterventionRepository.MecanicienStatutCount::getTotal)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, Double> delaiMoyenTraitementParMecanicien() {
+        return interventionRepository.moyenneDelaiTraitementParMecanicien(StatutIntervention.RESTITUEE.name()).stream()
+            .collect(Collectors.toMap(InterventionRepository.MecanicienAvgDelay::getMecanicienId,
+                d -> d.getAvgSeconds() == null ? null : d.getAvgSeconds() / 3600.0));
     }
 }
