@@ -104,8 +104,7 @@ public class MecanicienServiceImpl implements MecanicienService {
                     .hasInterventionsActivesNonFinales(id);
             if (interventionsNonFinales) {
                 throw new MecanicienDesactivationInterditeException(
-                        "Désactivation impossible : le mécanicien possède au moins une intervention active dont le statut n'est pas final (id "
-                                + id + ")");
+                        "Archivage impossible : le mécanicien possède au moins une intervention dont le statut n'est pas final");
             }
             mecanicien.setActif(false);
             mecanicienRepository.save(mecanicien);
