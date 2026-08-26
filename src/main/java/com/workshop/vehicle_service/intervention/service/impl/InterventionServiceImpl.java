@@ -5,6 +5,7 @@ import com.workshop.vehicle_service.common.exception.*;
 import com.workshop.vehicle_service.intervention.dto.InterventionCreateRequest;
 import com.workshop.vehicle_service.intervention.dto.InterventionResponse;
 import com.workshop.vehicle_service.intervention.dto.InterventionUpdateRequest;
+import com.workshop.vehicle_service.intervention.dto.AiDiagnosticPropositionResponse;
 import com.workshop.vehicle_service.intervention.entity.Intervention;
 import com.workshop.vehicle_service.intervention.enums.StatutIntervention;
 import com.workshop.vehicle_service.intervention.enums.TypeIntervention;
@@ -13,6 +14,7 @@ import com.workshop.vehicle_service.intervention.repository.InterventionReposito
 import com.workshop.vehicle_service.intervention.repository.InterventionSpecifications;
 import com.workshop.vehicle_service.intervention.service.InterventionNumeroGenerator;
 import com.workshop.vehicle_service.intervention.service.InterventionService;
+import com.workshop.vehicle_service.intervention.service.AiDiagnosticService;
 import com.workshop.vehicle_service.mecanicien.service.MecanicienService;
 import com.workshop.vehicle_service.vehicule.entity.Vehicule;
 import com.workshop.vehicle_service.vehicule.service.VehiculeService;
@@ -31,16 +33,21 @@ import java.time.format.DateTimeFormatter;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class InterventionServiceImpl implements InterventionService  {
+public class InterventionServiceImpl implements InterventionService {
 
     private static final DateTimeFormatter CSV_DATE_TIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static final String CSV_SEPARATOR = ",";
 
-    /** Statuts considérés comme "clôturés" pour la charge active d'un mécanicien. */
+    /**
+     * Statuts considérés comme "clôturés" pour la charge active d'un mécanicien.
+     */
     private static final List<StatutIntervention> STATUTS_CLOTURES = List.of(
             StatutIntervention.TERMINEE, StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
 
-    /** Statuts jamais considérés en retard, même si la date de restitution prévue est dépassée. */
+    /**
+     * Statuts jamais considérés en retard, même si la date de restitution prévue
+     * est dépassée.
+     */
     private static final List<StatutIntervention> STATUTS_EXCLUS_RETARD = List.of(
             StatutIntervention.RESTITUEE, StatutIntervention.ANNULEE);
 
@@ -52,6 +59,7 @@ public class InterventionServiceImpl implements InterventionService  {
     private final MecanicienService mecanicienService;
     private final InterventionNumeroGenerator numeroGenerator;
     private final InterventionMapper interventionMapper;
+    private final AiDiagnosticService aiDiagnosticService;
 
     @Override
     public InterventionResponse create(InterventionCreateRequest request) {
@@ -107,7 +115,7 @@ public class InterventionServiceImpl implements InterventionService  {
 
         StringBuilder csv = new StringBuilder();
         csv.append(
-                        "numero,immatriculation,marque,modele,type,statut,priorite,dateDepot,dateRestitutionPrevue,mecanicien,enRetard")
+                "numero,immatriculation,marque,modele,type,statut,priorite,dateDepot,dateRestitutionPrevue,mecanicien,enRetard")
                 .append(System.lineSeparator());
 
         for (Intervention intervention : interventions) {
@@ -177,6 +185,18 @@ public class InterventionServiceImpl implements InterventionService  {
                         sourceIntervention.getId(),
                         pageable)
                 .map(intervention -> toResponse(intervention, LocalDateTime.now()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AiDiagnosticPropositionResponse generateAiDiagnosticProposal(String idOrNumero) {
+        Intervention intervention = getEntityByIdOrNumero(idOrNumero);
+        String descriptionClient = intervention.getDescriptionClient();
+        if (descriptionClient == null || descriptionClient.isBlank()) {
+            throw new DescriptionClientVideException(
+                    "La description client est obligatoire pour generer une proposition IA.");
+        }
+        return aiDiagnosticService.generateProposition(descriptionClient);
     }
 
     @Override
@@ -254,6 +274,16 @@ public class InterventionServiceImpl implements InterventionService  {
         return interventionRepository.findByNumero(numero)
                 .orElseThrow(() -> new InterventionIntrouvableException(
                         "Intervention introuvable pour le numero " + numero));
+    }
+
+    private Intervention getEntityByIdOrNumero(String idOrNumero) {
+        if (idOrNumero != null && idOrNumero.matches("^\\d+$")) {
+            Long id = Long.valueOf(idOrNumero);
+            return interventionRepository.findById(id)
+                    .orElseThrow(() -> new InterventionIntrouvableException(
+                            "Intervention introuvable pour l'identifiant " + idOrNumero));
+        }
+        return getEntityByNumero(idOrNumero);
     }
 
     private InterventionResponse toResponse(Intervention intervention, LocalDateTime evaluationTime) {
@@ -399,7 +429,7 @@ public class InterventionServiceImpl implements InterventionService  {
     @Transactional(readOnly = true)
     public Map<Long, Double> delaiMoyenTraitementParMecanicien() {
         return interventionRepository.moyenneDelaiTraitementParMecanicien(StatutIntervention.RESTITUEE.name()).stream()
-            .collect(Collectors.toMap(InterventionRepository.MecanicienAvgDelay::getMecanicienId,
-                d -> d.getAvgSeconds() == null ? null : d.getAvgSeconds() / 3600.0));
+                .collect(Collectors.toMap(InterventionRepository.MecanicienAvgDelay::getMecanicienId,
+                        d -> d.getAvgSeconds() == null ? null : d.getAvgSeconds() / 3600.0));
     }
 }

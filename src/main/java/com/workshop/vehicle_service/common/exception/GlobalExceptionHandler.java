@@ -38,6 +38,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(DescriptionClientVideException.class)
+    public ResponseEntity<ApiErrorResponse> handleDescriptionClientVide(DescriptionClientVideException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleBadCredentials(BadCredentialsException ex,
             HttpServletRequest request) {
