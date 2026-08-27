@@ -48,4 +48,14 @@ public interface VehiculeService {
     Void deleteVehicule(Long id);
 
     List<VehiculeResponse> getVehiculesByStatut(StatutIntervention statut);
+
+    Page<VehiculeResponse> searchVehicules(
+            String immatriculation,
+            String marque,
+            String modele,
+            Integer annee,
+            String clientFictif,
+            Boolean actif,
+            Pageable pageable
+    );
 }

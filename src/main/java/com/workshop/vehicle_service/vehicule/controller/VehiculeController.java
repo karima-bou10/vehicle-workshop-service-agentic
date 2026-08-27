@@ -66,4 +66,26 @@ public class VehiculeController {
         );
     }
 
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
+    public ResponseEntity<Page<VehiculeResponse>> searchVehicules(
+            @RequestParam(required = false) String immatriculation,
+            @RequestParam(required = false) String marque,
+            @RequestParam(required = false) String modele,
+            @RequestParam(required = false) Integer annee,
+            @RequestParam(required = false) String clientFictif,
+            @RequestParam(required = false) Boolean actif,
+            Pageable pageable) {
+
+        return ResponseEntity.ok(
+                vehiculeService.searchVehicules(
+                        immatriculation,
+                        marque,
+                        modele,
+                        annee,
+                        clientFictif,
+                        actif,
+                        pageable));
+    }
+
 }

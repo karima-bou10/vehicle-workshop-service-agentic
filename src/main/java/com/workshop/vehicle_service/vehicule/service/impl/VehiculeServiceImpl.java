@@ -3,6 +3,8 @@ package com.workshop.vehicle_service.vehicule.service.impl;
 import com.workshop.vehicle_service.common.exception.VehiculeInactifException;
 import com.workshop.vehicle_service.common.exception.ResourceNotFoundException;
 import com.workshop.vehicle_service.common.exception.VehiculeIntrouvableException;
+import com.workshop.vehicle_service.vehicule.specification.VehiculeSpecification;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.workshop.vehicle_service.intervention.enums.StatutIntervention;
@@ -142,5 +144,61 @@ public class VehiculeServiceImpl implements VehiculeService {
                 .stream()
                 .map(vehiculeMapper::toResponse)
                 .toList();
+    }
+
+
+
+
+    @Override
+    public Page<VehiculeResponse> searchVehicules(
+            String immatriculation,
+            String marque,
+            String modele,
+            Integer annee,
+            String clientFictif,
+            Boolean actif,
+            Pageable pageable) {
+
+        Specification<Vehicule> specification =
+                Specification.where(
+                                VehiculeSpecification.hasImmatriculation(
+                                        immatriculation
+                                )
+                        )
+                        .and(
+                                VehiculeSpecification.hasMarque(
+                                        marque
+                                )
+                        )
+                        .and(
+                                VehiculeSpecification.hasModele(
+                                        modele
+                                )
+                        )
+                        .and(
+                                VehiculeSpecification.hasAnnee(
+                                        annee
+                                )
+                        )
+                        .and(
+                                VehiculeSpecification.hasClientFictif(
+                                        clientFictif
+                                )
+                        )
+                        .and(
+                                VehiculeSpecification.hasActif(
+                                        actif
+                                )
+                        );
+
+        Page<Vehicule> page =
+                vehiculeRepository.findAll(
+                        specification,
+                        pageable
+                );
+
+        return page.map(
+                vehiculeMapper::toResponse
+        );
     }
 }
