@@ -17,6 +17,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class VehiculeServiceImpl implements VehiculeService {
@@ -48,8 +50,9 @@ public class VehiculeServiceImpl implements VehiculeService {
     @Override
     public Page<VehiculeResponse> getAllVehicules(String search, Pageable pageable) {
         Page<Vehicule> result = (search != null && !search.isBlank())
-                ?vehiculeRepository.searchByKeyword(search.trim(), pageable)
-                :vehiculeRepository.findAll(pageable);
+                ? vehiculeRepository.searchByKeyword(search.trim(), pageable)
+                : vehiculeRepository.findByActifTrue(pageable);
+
         return result.map(vehiculeMapper::toResponse);
     }
 
@@ -75,11 +78,20 @@ public class VehiculeServiceImpl implements VehiculeService {
      * @return un objet VehiculeResponse représentant le véhicule créé
      */
     @Override
-    public VehiculeResponse createVehicule(VehiculeRequest request) {
-        Vehicule vehicule = vehiculeMapper.toEntity(request);
-        return vehiculeMapper.toResponse(vehiculeRepository.save(vehicule));
-    }
+    public VehiculeResponse createVehicule(VehiculeRequest request) throws BusinessException {
 
+        String immatriculation = request.immatriculationFictive();
+
+        if (vehiculeRepository.existsByImmatriculationFictive(immatriculation)) {
+            throw new BusinessException(
+                    "Un véhicule avec l'immatriculation " + immatriculation + " existe déjà");
+        }
+
+        Vehicule vehicule = vehiculeMapper.toEntity(request);
+
+        return vehiculeMapper.toResponse(
+                vehiculeRepository.save(vehicule));
+    }
     /**
      * Met à jour un véhicule existant avec les nouvelles informations fournies dans la requête.
      *
@@ -121,5 +133,14 @@ public class VehiculeServiceImpl implements VehiculeService {
         vehiculeRepository.save(vehicule);
 
         return null;
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public List<VehiculeResponse> getVehiculesByStatut(StatutIntervention statut) {
+
+        return vehiculeRepository.findByInterventionsStatut(statut)
+                .stream()
+                .map(vehiculeMapper::toResponse)
+                .toList();
     }
 }
