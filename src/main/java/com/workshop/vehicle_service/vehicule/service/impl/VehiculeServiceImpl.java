@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -80,13 +81,25 @@ public class VehiculeServiceImpl implements VehiculeService {
      * @return un objet VehiculeResponse représentant le véhicule créé
      */
     @Override
-    public VehiculeResponse createVehicule(VehiculeRequest request) throws BusinessException {
+    public VehiculeResponse createVehicule(VehiculeRequest request)
 
-        String immatriculation = request.immatriculationFictive();
+            throws BusinessException {
 
-        if (vehiculeRepository.existsByImmatriculationFictive(immatriculation)) {
+
+        String immatriculation = request.immatriculationFictive().trim().toUpperCase();;
+
+        Optional<Vehicule> existing =
+                vehiculeRepository.findByImmatriculationFictive(immatriculation);
+
+        if (existing.isPresent()) {
+
+            if (!existing.get().isActif()) {
+                throw new BusinessException(
+                        "Un véhicule archivé avec cette immatriculation existe déjà. Veuillez le réactiver.");
+            }
+
             throw new BusinessException(
-                    "Un véhicule avec l'immatriculation " + immatriculation + " existe déjà");
+                    "Un véhicule avec cette immatriculation existe déjà.");
         }
 
         Vehicule vehicule = vehiculeMapper.toEntity(request);

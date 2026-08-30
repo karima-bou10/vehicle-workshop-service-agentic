@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface VehiculeRepository extends JpaRepository<Vehicule, Long>, JpaSpecificationExecutor<Vehicule> {
     @Query("""
@@ -27,6 +28,7 @@ public interface VehiculeRepository extends JpaRepository<Vehicule, Long>, JpaSp
 
 
     boolean existsByImmatriculationFictive(String immatriculationFictive);
+    Optional<Vehicule> findByImmatriculationFictive(String immatriculationFictive);
 
     List<Vehicule> findByInterventionsStatut(StatutIntervention statut);
     Page<Vehicule> findByActifTrue(Pageable pageable);
