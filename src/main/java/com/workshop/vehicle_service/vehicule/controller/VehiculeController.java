@@ -1,8 +1,10 @@
 package com.workshop.vehicle_service.vehicule.controller;
 
+import com.workshop.vehicle_service.intervention.enums.StatutIntervention;
 import com.workshop.vehicle_service.vehicule.dto.VehiculeRequest;
 import com.workshop.vehicle_service.vehicule.dto.VehiculeResponse;
 import com.workshop.vehicle_service.vehicule.service.VehiculeService;
+import com.workshop.vehicle_service.vehicule.service.impl.BusinessException;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +38,7 @@ public class VehiculeController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
     @Operation(summary = "Creer un vehicule")
-    public ResponseEntity<VehiculeResponse> create(@Valid @RequestBody VehiculeRequest vehiculeRequest){
+    public ResponseEntity<VehiculeResponse> create(@Valid @RequestBody VehiculeRequest vehiculeRequest) throws BusinessException {
         return ResponseEntity.status(HttpStatus.CREATED).body(vehiculeService.createVehicule(vehiculeRequest));
     }
 
@@ -53,6 +55,37 @@ public class VehiculeController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
                vehiculeService.deleteVehicule(id);
                return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/statut")
+    public ResponseEntity<List<VehiculeResponse>> getVehiculesByStatut(
+            @RequestParam StatutIntervention statut) {
+
+        return ResponseEntity.ok(
+                vehiculeService.getVehiculesByStatut(statut)
+        );
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
+    public ResponseEntity<Page<VehiculeResponse>> searchVehicules(
+            @RequestParam(required = false) String immatriculation,
+            @RequestParam(required = false) String marque,
+            @RequestParam(required = false) String modele,
+            @RequestParam(required = false) Integer annee,
+            @RequestParam(required = false) String clientFictif,
+            @RequestParam(required = false) Boolean actif,
+            Pageable pageable) {
+
+        return ResponseEntity.ok(
+                vehiculeService.searchVehicules(
+                        immatriculation,
+                        marque,
+                        modele,
+                        annee,
+                        clientFictif,
+                        actif,
+                        pageable));
     }
 
 }
