@@ -18,6 +18,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -63,6 +65,20 @@ public class MecanicienController {
     public ResponseEntity<Page<MecanicienResponse>> list(
             @PageableDefault(size = 20, sort = "nom", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(mecanicienService.list(pageable));
+    }
+
+    @Operation(summary = "Exporter les mécaniciens actifs en CSV")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "CSV généré"),
+            @ApiResponse(responseCode = "401", description = "Non authentifié")
+    })
+    @GetMapping(value = "/export", produces = "text/csv")
+    public ResponseEntity<String> export() {
+        String csv = mecanicienService.exportCsv();
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"mecaniciens.csv\"")
+                .body(csv);
     }
 
     @Operation(summary = "Lister les mécaniciens actifs et disponibles (paginé)")

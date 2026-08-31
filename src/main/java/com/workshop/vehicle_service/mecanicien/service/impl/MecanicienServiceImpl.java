@@ -16,6 +16,7 @@ import com.workshop.vehicle_service.mecanicien.service.MecanicienService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.HttpHeaders;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -121,6 +122,23 @@ public class MecanicienServiceImpl implements MecanicienService {
 
     @Override
     @Transactional(readOnly = true)
+    public String exportCsv() {
+        List<Mecanicien> mecaniciens = mecanicienRepository.findByActifTrueOrderByNomAsc();
+        StringBuilder csv = new StringBuilder();
+        csv.append("nom;specialite;disponibilite").append(System.lineSeparator());
+
+        for (Mecanicien mecanicien : mecaniciens) {
+            csv.append(csvValue(mecanicien.getNom())).append(';')
+                    .append(csvValue(mecanicien.getSpecialite())).append(';')
+                    .append(csvValue(Boolean.toString(mecanicien.isDisponible())))
+                    .append(System.lineSeparator());
+        }
+
+        return csv.toString();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<MecanicienResponse> listDisponibles(Pageable pageable) {
         validatePageable(pageable);
         return mecanicienRepository.findByActifTrueAndDisponible(true, pageable).map(mecanicienMapper::toResponse);
@@ -158,6 +176,18 @@ public class MecanicienServiceImpl implements MecanicienService {
     private Mecanicien getEntityById(Long id) {
         return mecanicienRepository.findById(id)
                 .orElseThrow(() -> new MecanicienIntrouvableException("Mécanicien introuvable pour l'id " + id));
+    }
+
+    private String csvValue(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        String escaped = value.replace("\"", "\"\"");
+        if (escaped.contains(";") || escaped.contains("\"") || escaped.contains("\n") || escaped.contains("\r")) {
+            return "\"" + escaped + "\"";
+        }
+        return escaped;
     }
 
     private void validatePageable(Pageable pageable) {
