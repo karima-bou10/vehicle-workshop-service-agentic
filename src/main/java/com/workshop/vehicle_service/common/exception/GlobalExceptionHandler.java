@@ -1,8 +1,10 @@
 package com.workshop.vehicle_service.common.exception;
 
+import com.workshop.vehicle_service.vehicule.service.impl.BusinessException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +36,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DateRestitutionInvalideException.class)
     public ResponseEntity<ApiErrorResponse> handleDateRestitutionInvalide(DateRestitutionInvalideException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(DescriptionClientVideException.class)
+    public ResponseEntity<ApiErrorResponse> handleDescriptionClientVide(DescriptionClientVideException ex,
             HttpServletRequest request) {
         return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI());
     }
@@ -138,5 +146,13 @@ public class GlobalExceptionHandler {
                 message,
                 path);
         return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<Map<String, String>> handleBusinessException(
+            BusinessException ex) {
+
+        return ResponseEntity.badRequest()
+                .body(Map.of("message", ex.getMessage()));
     }
 }

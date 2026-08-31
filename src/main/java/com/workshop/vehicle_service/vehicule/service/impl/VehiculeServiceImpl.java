@@ -3,6 +3,8 @@ package com.workshop.vehicle_service.vehicule.service.impl;
 import com.workshop.vehicle_service.common.exception.VehiculeInactifException;
 import com.workshop.vehicle_service.common.exception.ResourceNotFoundException;
 import com.workshop.vehicle_service.common.exception.VehiculeIntrouvableException;
+import com.workshop.vehicle_service.vehicule.specification.VehiculeSpecification;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.workshop.vehicle_service.intervention.enums.StatutIntervention;
@@ -16,6 +18,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -48,8 +53,9 @@ public class VehiculeServiceImpl implements VehiculeService {
     @Override
     public Page<VehiculeResponse> getAllVehicules(String search, Pageable pageable) {
         Page<Vehicule> result = (search != null && !search.isBlank())
-                ?vehiculeRepository.searchByKeyword(search.trim(), pageable)
-                :vehiculeRepository.findAll(pageable);
+                ? vehiculeRepository.searchByKeyword(search.trim(), pageable)
+                : vehiculeRepository.findByActifTrue(pageable);
+
         return result.map(vehiculeMapper::toResponse);
     }
 
@@ -75,11 +81,32 @@ public class VehiculeServiceImpl implements VehiculeService {
      * @return un objet VehiculeResponse représentant le véhicule créé
      */
     @Override
-    public VehiculeResponse createVehicule(VehiculeRequest request) {
-        Vehicule vehicule = vehiculeMapper.toEntity(request);
-        return vehiculeMapper.toResponse(vehiculeRepository.save(vehicule));
-    }
+    public VehiculeResponse createVehicule(VehiculeRequest request)
 
+            throws BusinessException {
+
+
+        String immatriculation = request.immatriculationFictive().trim().toUpperCase();;
+
+        Optional<Vehicule> existing =
+                vehiculeRepository.findByImmatriculationFictive(immatriculation);
+
+        if (existing.isPresent()) {
+
+            if (!existing.get().isActif()) {
+                throw new BusinessException(
+                        "Un véhicule archivé avec cette immatriculation existe déjà. Veuillez le réactiver.");
+            }
+
+            throw new BusinessException(
+                    "Un véhicule avec cette immatriculation existe déjà.");
+        }
+
+        Vehicule vehicule = vehiculeMapper.toEntity(request);
+
+        return vehiculeMapper.toResponse(
+                vehiculeRepository.save(vehicule));
+    }
     /**
      * Met à jour un véhicule existant avec les nouvelles informations fournies dans la requête.
      *
@@ -121,5 +148,70 @@ public class VehiculeServiceImpl implements VehiculeService {
         vehiculeRepository.save(vehicule);
 
         return null;
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public List<VehiculeResponse> getVehiculesByStatut(StatutIntervention statut) {
+
+        return vehiculeRepository.findByInterventionsStatut(statut)
+                .stream()
+                .map(vehiculeMapper::toResponse)
+                .toList();
+    }
+
+
+
+
+    @Override
+    public Page<VehiculeResponse> searchVehicules(
+            String immatriculation,
+            String marque,
+            String modele,
+            Integer annee,
+            String clientFictif,
+            Boolean actif,
+            Pageable pageable) {
+
+        Specification<Vehicule> specification =
+                Specification.where(
+                                VehiculeSpecification.hasImmatriculation(
+                                        immatriculation
+                                )
+                        )
+                        .and(
+                                VehiculeSpecification.hasMarque(
+                                        marque
+                                )
+                        )
+                        .and(
+                                VehiculeSpecification.hasModele(
+                                        modele
+                                )
+                        )
+                        .and(
+                                VehiculeSpecification.hasAnnee(
+                                        annee
+                                )
+                        )
+                        .and(
+                                VehiculeSpecification.hasClientFictif(
+                                        clientFictif
+                                )
+                        )
+                        .and(
+                                VehiculeSpecification.hasActif(
+                                        actif
+                                )
+                        );
+
+        Page<Vehicule> page =
+                vehiculeRepository.findAll(
+                        specification,
+                        pageable
+                );
+
+        return page.map(
+                vehiculeMapper::toResponse
+        );
     }
 }
