@@ -28,6 +28,9 @@ public interface MecanicienService {
     /** Liste complète (non paginée) des mécaniciens actifs — dédiée aux agrégations dashboard. */
     List<MecanicienResponse> listActifs();
 
+    /** Export CSV des mécaniciens actifs. */
+    String exportCsv();
+
     /** Mécaniciens actifs et disponibles, paginé. */
     Page<MecanicienResponse> listDisponibles(Pageable pageable);
 
