@@ -55,6 +55,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @PostMapping
+        @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
         public ResponseEntity<InterventionResponse> create(@Valid @RequestBody InterventionCreateRequest request) {
                 InterventionResponse response = interventionService.create(request);
                 return ResponseEntity.created(URI.create("/api/interventions/" + response.numero())).body(response);
@@ -67,6 +68,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @GetMapping("/{numero}")
+        @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
         public ResponseEntity<InterventionResponse> getByNumero(
                         @PathVariable @Parameter(description = "Numero au format INT-AAAA-NNNNNN") String numero) {
                 return ResponseEntity.ok(interventionService.findByNumero(numero));
@@ -80,6 +82,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifie")
         })
         @PostMapping("/{id}/ai-diagnostic")
+        @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
         public ResponseEntity<AiDiagnosticPropositionResponse> aiDiagnostic(
                         @PathVariable @Parameter(description = "Identifiant numerique ou numero metier") String id) {
                 return ResponseEntity.ok(interventionService.generateAiDiagnosticProposal(id));
@@ -92,6 +95,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @GetMapping
+        @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
         public ResponseEntity<Page<InterventionResponse>> list(
                         @RequestParam(required = false) StatutIntervention statut,
                         @RequestParam(required = false) Long mecanicienId,
@@ -113,6 +117,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @GetMapping(value = "/export", produces = "text/csv")
+        @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
         public ResponseEntity<String> export(
                         @RequestParam(required = false) StatutIntervention statut,
                         @RequestParam(required = false) Long mecanicienId,
@@ -139,6 +144,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @PutMapping("/{numero}")
+        @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
         public ResponseEntity<InterventionResponse> update(@PathVariable String numero,
                         @Valid @RequestBody InterventionUpdateRequest request) {
                 return ResponseEntity.ok(interventionService.update(numero, request));
@@ -152,6 +158,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @DeleteMapping("/{numero}")
+        @PreAuthorize("hasAnyRole('ROLE_USER'")
         public ResponseEntity<Void> delete(@PathVariable String numero) {
                 interventionService.delete(numero);
                 return ResponseEntity.noContent().build();
@@ -167,6 +174,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @PostMapping("/{numero}/transitions")
+        @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
         public ResponseEntity<InterventionResponse> transition(@PathVariable String numero,
                         @Valid @RequestBody TransitionRequest request) {
                 return ResponseEntity.ok(workflowService.transition(numero, request));
@@ -197,6 +205,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @GetMapping("/{numero}/historique")
+        @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
         public ResponseEntity<Page<HistoriqueInterventionResponse>> getHistorique(@PathVariable String numero,
                         @PageableDefault(size = 20, sort = "date", direction = Sort.Direction.ASC) Pageable pageable) {
                 return ResponseEntity.ok(historiqueInterventionService.findByInterventionNumero(numero, pageable));
@@ -210,6 +219,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @GetMapping("/{numero}/autres-interventions-vehicule")
+        @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
         public ResponseEntity<Page<InterventionResponse>> getAutresInterventionsVehicule(@PathVariable String numero,
                         @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
                 return ResponseEntity.ok(interventionService.findAutresInterventionsDuVehicule(numero, pageable));
@@ -223,6 +233,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @GetMapping("/mecanicien/{mecanicienId}")
+        @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
         public ResponseEntity<Page<InterventionResponse>> getByMecanicien(@PathVariable Long mecanicienId,
                         @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
                 return ResponseEntity.ok(interventionService.findByMecanicien(mecanicienId, pageable));

@@ -62,6 +62,7 @@ public class MecanicienController {
             @ApiResponse(responseCode = "401", description = "Non authentifié")
     })
     @GetMapping
+    @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
     public ResponseEntity<Page<MecanicienResponse>> list(
             @PageableDefault(size = 20, sort = "nom", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(mecanicienService.list(pageable));
@@ -73,6 +74,7 @@ public class MecanicienController {
             @ApiResponse(responseCode = "401", description = "Non authentifié")
     })
     @GetMapping(value = "/export", produces = "text/csv")
+    @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
     public ResponseEntity<String> export() {
         String csv = mecanicienService.exportCsv();
         return ResponseEntity.ok()
@@ -88,6 +90,7 @@ public class MecanicienController {
             @ApiResponse(responseCode = "401", description = "Non authentifié")
     })
     @GetMapping("/disponibles")
+    @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
     public ResponseEntity<Page<MecanicienResponse>> listDisponibles(
             @PageableDefault(size = 20, sort = "nom", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(mecanicienService.listDisponibles(pageable));
@@ -100,6 +103,7 @@ public class MecanicienController {
             @ApiResponse(responseCode = "401", description = "Non authentifié")
     })
     @GetMapping("/indisponibles")
+    @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
     public ResponseEntity<Page<MecanicienResponse>> listIndisponibles(
             @PageableDefault(size = 20, sort = "nom", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(mecanicienService.listIndisponibles(pageable));
@@ -112,6 +116,7 @@ public class MecanicienController {
             @ApiResponse(responseCode = "401", description = "Non authentifié")
     })
     @GetMapping("/recherche")
+    @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
     public ResponseEntity<Page<MecanicienResponse>> search(
             @RequestParam(required = false) String nom,
             @RequestParam(required = false) String specialite,
@@ -126,6 +131,7 @@ public class MecanicienController {
             @ApiResponse(responseCode = "401", description = "Non authentifié")
     })
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_USER','ROLE_MANAGER')")
     public ResponseEntity<MecanicienResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(mecanicienService.findById(id));
     }
