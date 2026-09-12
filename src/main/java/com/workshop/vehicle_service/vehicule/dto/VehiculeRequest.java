@@ -12,10 +12,6 @@ import jakarta.validation.constraints.Size;
 public record VehiculeRequest(
 
         @NotBlank(message = "L'immatriculation est obligatoire")
-        @Pattern(
-                regexp = "^[A-Z]{2}-\\d{3}-[A-Z]{2}$",
-                message = "Le format doit être de type AA-123-AA"
-        )
         String immatriculationFictive,
 
         @NotBlank(message = "La marque est obligatoire")
