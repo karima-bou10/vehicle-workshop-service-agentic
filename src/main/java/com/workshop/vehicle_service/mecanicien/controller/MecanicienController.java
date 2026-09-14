@@ -56,7 +56,7 @@ public class MecanicienController {
     }
 
     @Operation(summary = "Lister les mécaniciens actifs (paginé)")
-    @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_MANAGER','ROLE_USER')")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Page de mécaniciens actifs"),
             @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
@@ -69,7 +69,7 @@ public class MecanicienController {
     }
 
     @Operation(summary = "Exporter les mécaniciens actifs en CSV")
-    @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_MANAGER','ROLE_USER')")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "CSV généré"),
             @ApiResponse(responseCode = "401", description = "Non authentifié")
@@ -84,7 +84,7 @@ public class MecanicienController {
     }
 
     @Operation(summary = "Lister les mécaniciens actifs et disponibles (paginé)")
-    @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_MANAGER','ROLE_USER')")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Page de mécaniciens actifs disponibles"),
             @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
@@ -97,7 +97,7 @@ public class MecanicienController {
     }
 
     @Operation(summary = "Lister les mécaniciens actifs et indisponibles (paginé)")
-    @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_MANAGER','ROLE_USER')")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Page de mécaniciens actifs indisponibles"),
             @ApiResponse(responseCode = "400", description = "Paramètres de pagination invalides"),
@@ -110,7 +110,7 @@ public class MecanicienController {
     }
 
     @Operation(summary = "Rechercher les mécaniciens actifs par nom et/ou spécialité (paginé)")
-    @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_MANAGER','ROLE_USER')")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Page de mécaniciens correspondant à la recherche"),
             @ApiResponse(responseCode = "400", description = "Paramètres de recherche ou de pagination invalides"),
@@ -125,7 +125,7 @@ public class MecanicienController {
     }
 
     @Operation(summary = "Consulter un mécanicien par son id (actif ou inactif)")
-    @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_MANAGER','ROLE_USER')")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Mécanicien trouvé", content = @Content(schema = @Schema(implementation = MecanicienResponse.class))),
             @ApiResponse(responseCode = "404", description = "Mécanicien introuvable"),

@@ -192,7 +192,7 @@ class InterventionControllerIntegrationTest extends AuthIntegrationTestBase {
 
         @Test
         void deleteShouldSoftDeleteAndBeIdempotentFromTerminalStatus() throws Exception {
-                String token = loginAndGetToken("user1", "pass123");
+                String token = loginAndGetToken("manager1", "pass123");
                 Vehicule vehicule = activeVehicule();
                 Intervention intervention = interventionRepository.save(Intervention.builder()
                                 .numero("INT-2026-000002")
@@ -226,7 +226,7 @@ class InterventionControllerIntegrationTest extends AuthIntegrationTestBase {
 
         @Test
         void deleteShouldRejectWhenStatusNotTerminal() throws Exception {
-                String token = loginAndGetToken("user1", "pass123");
+                String token = loginAndGetToken("manager1", "pass123");
                 Vehicule vehicule = activeVehicule();
                 Intervention intervention = interventionRepository.save(Intervention.builder()
                                 .numero("INT-2026-000020")
