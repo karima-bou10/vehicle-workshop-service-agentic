@@ -6,15 +6,14 @@ import com.workshop.vehicle_service.intervention.dto.AiDiagnosticPropositionResp
 import com.workshop.vehicle_service.intervention.enums.PrioriteIntervention;
 import com.workshop.vehicle_service.intervention.service.AiDiagnosticService;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 
 @Service
 public class AiDiagnosticServiceImpl implements AiDiagnosticService {
@@ -52,20 +51,27 @@ public class AiDiagnosticServiceImpl implements AiDiagnosticService {
         try {
             String rawResponse = CompletableFuture
                     .supplyAsync(() -> chatClient.prompt().user(prompt).call().content())
-                    .get(timeoutMs, TimeUnit.MILLISECONDS);
+                    .orTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    .join();
+
 
             return parseOrFallback(rawResponse);
-        } catch (TimeoutException ex) {
-            LOGGER.warn("AI diagnostic provider timeout after {} ms", timeoutMs);
-            return fallback();
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            LOGGER.warn("AI diagnostic provider call interrupted");
-            return fallback();
-        } catch (ExecutionException ex) {
-            LOGGER.warn("AI diagnostic provider unavailable: {}", ex.getClass().getSimpleName());
-            return fallback();
-        } catch (RuntimeException ex) {
+        } catch (CompletionException ex) {
+            Throwable cause = ex.getCause();
+            if (cause instanceof TimeoutException) {
+                LOGGER.warn("AI diagnostic provider timeout after {} ms", timeoutMs);
+                return fallback();
+            }
+            if (cause instanceof ResourceAccessException) {
+                LOGGER.warn("AI diagnostic provider network timeout connection error: {}", cause.getMessage());
+                return fallback();
+            }
+
+                LOGGER.warn("AI diagnostic provider execution failed: {}", ex.getClass().getSimpleName());
+                return fallback();
+
+        }
+        catch (RuntimeException ex) {
             LOGGER.warn("AI diagnostic provider runtime failure: {}", ex.getClass().getSimpleName());
             return fallback();
         }

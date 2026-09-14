@@ -46,6 +46,7 @@ public class InterventionController {
         private final WorkflowService workflowService;
         private final HistoriqueInterventionService historiqueInterventionService;
 
+        @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
         @Operation(summary = "Créer une intervention liée à un véhicule (statut initial RECUE, numero auto-généré)")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "201", description = "Intervention créée", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
@@ -60,6 +61,7 @@ public class InterventionController {
                 return ResponseEntity.created(URI.create("/api/interventions/" + response.numero())).body(response);
         }
 
+        @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
         @Operation(summary = "Consulter une intervention par son numero")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Intervention trouvée", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
@@ -72,6 +74,7 @@ public class InterventionController {
                 return ResponseEntity.ok(interventionService.findByNumero(numero));
         }
 
+        @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
         @Operation(summary = "Generer une proposition IA de diagnostic a partir de la description client")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Proposition IA generee (ou fallback)", content = @Content(schema = @Schema(implementation = AiDiagnosticPropositionResponse.class))),
@@ -85,6 +88,7 @@ public class InterventionController {
                 return ResponseEntity.ok(interventionService.generateAiDiagnosticProposal(id));
         }
 
+        @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
         @Operation(summary = "Lister les interventions actives avec filtres optionnels et indicateur de retard")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Page d'interventions actives"),
@@ -99,13 +103,14 @@ public class InterventionController {
                         @RequestParam(required = false) String immatriculation,
                         @RequestParam(required = false) String q,
                         @RequestParam(required = false) Boolean enRetard,
-                        @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
+                        @PageableDefault(size = 10, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
                 return ResponseEntity.ok(interventionService.list(
                                 new InterventionListFilter(statut, mecanicienId, vehiculeId, immatriculation, q,
                                                 enRetard),
                                 pageable));
         }
 
+        @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
         @Operation(summary = "Exporter en CSV les interventions filtrées")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "CSV généré"),
@@ -129,6 +134,7 @@ public class InterventionController {
                                 .body(csv);
         }
 
+        @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
         @Operation(summary = "Éditer les champs métier autorisés selon le statut courant")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Intervention mise à jour", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
@@ -144,6 +150,7 @@ public class InterventionController {
                 return ResponseEntity.ok(interventionService.update(numero, request));
         }
 
+        @PreAuthorize("hasRole('ROLE_MANAGER')")
         @Operation(summary = "Archivage conditionnel (soft delete, actif=false) — statuts terminaux uniquement")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "204", description = "Intervention désactivée (ou déjà désactivée)"),
@@ -157,6 +164,7 @@ public class InterventionController {
                 return ResponseEntity.noContent().build();
         }
 
+        @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
         @Operation(summary = "Faire progresser le statut d'une intervention avec validations conditionnelles")
         @ApiResponses(value = {
                         @ApiResponse(responseCode = "200", description = "Statut mis à jour", content = @Content(schema = @Schema(implementation = InterventionResponse.class))),
@@ -183,7 +191,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @PatchMapping("/{numero}/mecanicien")
-        @PreAuthorize("hasRole('MANAGER')")
+        @PreAuthorize("hasRole('ROLE_MANAGER')")
         public ResponseEntity<InterventionResponse> affecterMecanicien(@PathVariable String numero,
                         @Valid @RequestBody MecanicienAffectationRequest request) {
                 return ResponseEntity.ok(workflowService.affecterMecanicien(numero, request));
@@ -197,6 +205,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @GetMapping("/{numero}/historique")
+        @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
         public ResponseEntity<Page<HistoriqueInterventionResponse>> getHistorique(@PathVariable String numero,
                         @PageableDefault(size = 20, sort = "date", direction = Sort.Direction.ASC) Pageable pageable) {
                 return ResponseEntity.ok(historiqueInterventionService.findByInterventionNumero(numero, pageable));
@@ -210,6 +219,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @GetMapping("/{numero}/autres-interventions-vehicule")
+        @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
         public ResponseEntity<Page<InterventionResponse>> getAutresInterventionsVehicule(@PathVariable String numero,
                         @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
                 return ResponseEntity.ok(interventionService.findAutresInterventionsDuVehicule(numero, pageable));
@@ -223,6 +233,7 @@ public class InterventionController {
                         @ApiResponse(responseCode = "401", description = "Non authentifié")
         })
         @GetMapping("/mecanicien/{mecanicienId}")
+        @PreAuthorize("hasRole('ROLE_MANAGER','ROLE_USER')")
         public ResponseEntity<Page<InterventionResponse>> getByMecanicien(@PathVariable Long mecanicienId,
                         @PageableDefault(size = 20, sort = "dateDepot", direction = Sort.Direction.DESC) Pageable pageable) {
                 return ResponseEntity.ok(interventionService.findByMecanicien(mecanicienId, pageable));
