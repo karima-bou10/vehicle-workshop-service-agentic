@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
  * vehiculeId/numero/statut/mecanicienId/coutEstime/dateCloture/actif.
  */
 public record InterventionUpdateRequest(
+        @NotNull Long vehiculeId,
         @NotNull TypeIntervention type,
         @NotBlank String descriptionClient,
         @NotNull PrioriteIntervention priorite,

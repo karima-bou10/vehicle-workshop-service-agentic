@@ -157,6 +157,13 @@ public class InterventionServiceImpl implements InterventionService {
         intervention.setCoutEstime(request.coutEstime());
         intervention.setDateRestitutionPrevue(request.dateRestitutionPrevue());
         intervention.setDiagnostic(request.diagnostic());
+        if(!intervention.getVehicule().getId().equals(request.vehiculeId())){
+            Vehicule vehicule = vehiculeService.findActifById(request.vehiculeId());
+            if (vehicule == null) {
+                throw new IllegalArgumentException("Véhicule introuvable pour l'id " + request.vehiculeId());
+            }
+            intervention.setVehicule(vehicule);
+        }
 
         Intervention saved = interventionRepository.save(intervention);
         return toResponse(saved, LocalDateTime.now());
