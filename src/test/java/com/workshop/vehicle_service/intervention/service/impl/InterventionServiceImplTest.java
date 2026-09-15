@@ -197,7 +197,7 @@ class InterventionServiceImplTest {
                         ((Intervention) inv.getArgument(0)).isActif(),
                         false));
 
-        InterventionUpdateRequest request = new InterventionUpdateRequest(TypeIntervention.CONTROLE,
+        InterventionUpdateRequest request = new InterventionUpdateRequest(1L,TypeIntervention.CONTROLE,
                 "Nouvelle description", PrioriteIntervention.HAUTE, LocalDateTime.now(), null, null, null);
 
         interventionService.update("INT-2026-000001", request);
@@ -214,7 +214,7 @@ class InterventionServiceImplTest {
         Intervention intervention = Intervention.builder().numero("INT-2026-000002").actif(false).build();
         when(interventionRepository.findByNumero("INT-2026-000002")).thenReturn(Optional.of(intervention));
 
-        InterventionUpdateRequest request = new InterventionUpdateRequest(TypeIntervention.CONTROLE, "desc",
+        InterventionUpdateRequest request = new InterventionUpdateRequest(1L, TypeIntervention.CONTROLE, "desc",
                 PrioriteIntervention.BASSE, LocalDateTime.now(), null, null, null);
 
         assertThrows(InterventionInactiveException.class, () -> interventionService.update("INT-2026-000002", request));
@@ -225,7 +225,7 @@ class InterventionServiceImplTest {
     void updateShouldThrowWhenNumeroUnknown() {
         when(interventionRepository.findByNumero("INT-2026-999999")).thenReturn(Optional.empty());
 
-        InterventionUpdateRequest request = new InterventionUpdateRequest(TypeIntervention.CONTROLE, "desc",
+        InterventionUpdateRequest request = new InterventionUpdateRequest(1L, TypeIntervention.CONTROLE, "desc",
                 PrioriteIntervention.BASSE, LocalDateTime.now(), null, null, null);
 
         assertThrows(InterventionIntrouvableException.class,
@@ -330,7 +330,7 @@ class InterventionServiceImplTest {
 
         when(interventionRepository.findByNumero("INT-2026-000050")).thenReturn(Optional.of(intervention));
 
-        InterventionUpdateRequest request = new InterventionUpdateRequest(TypeIntervention.CONTROLE,
+        InterventionUpdateRequest request = new InterventionUpdateRequest(1L, TypeIntervention.CONTROLE,
                 "desc",
                 PrioriteIntervention.HAUTE,
                 LocalDateTime.of(2026, 1, 1, 10, 0), null, null, null);
@@ -357,7 +357,7 @@ class InterventionServiceImplTest {
 
         when(interventionRepository.findByNumero("INT-2026-000051")).thenReturn(Optional.of(intervention));
 
-        InterventionUpdateRequest request = new InterventionUpdateRequest(TypeIntervention.REPARATION,
+        InterventionUpdateRequest request = new InterventionUpdateRequest(1L, TypeIntervention.REPARATION,
                 "desc nouvelle",
                 PrioriteIntervention.NORMALE,
                 depot, null, null, null);
