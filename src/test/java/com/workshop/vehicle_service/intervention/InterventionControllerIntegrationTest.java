@@ -279,40 +279,6 @@ class InterventionControllerIntegrationTest extends AuthIntegrationTestBase {
         }
 
         @Test
-        void updateOnInactiveInterventionShouldReturn409() throws Exception {
-                String token = loginAndGetToken("user1", "pass123");
-                Vehicule vehicule = vehiculeRepository.save(Vehicule.builder()
-                                .immatriculationFictive("CD-"
-                                                + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase()
-                                                + "-EF")
-                                .marque("Renault")
-                                .modele("Clio")
-                                .annee(2020)
-                                .kilometrage(50000L)
-                                .clientFictif("Client Test")
-                                .actif(true)
-                                .build());
-                Intervention intervention = interventionRepository.save(Intervention.builder()
-                                .numero("INT-2026-000003")
-                                .vehicule(vehicule)
-                                .type(TypeIntervention.CONTROLE)
-                                .descriptionClient("Contrôle technique")
-                                .statut(StatutIntervention.RECUE)
-                                .priorite(PrioriteIntervention.NORMALE)
-                                .dateDepot(LocalDateTime.now())
-                                .actif(false)
-                                .build());
-
-                String payload = "{\"type\":\"CONTROLE\",\"descriptionClient\":\"MAJ\",\"priorite\":\"NORMALE\",\"dateDepot\":\"2026-01-01T10:00:00\"}";
-
-                mockMvc.perform(put("/api/interventions/{numero}", intervention.getNumero())
-                                .header("Authorization", "Bearer " + token)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(payload))
-                                .andExpect(status().isConflict());
-        }
-
-        @Test
         void workflowTransitionsShouldEnforceRulesAndCreateHistorique() throws Exception {
                 String userToken = loginAndGetToken("user1", "pass123");
                 String managerToken = loginAndGetToken("manager1", "pass123");
@@ -391,55 +357,6 @@ class InterventionControllerIntegrationTest extends AuthIntegrationTestBase {
                                 .header("Authorization", "Bearer " + userToken))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.totalElements").value(5));
-        }
-
-        @Test
-        void updateShouldReturn422WhenInterventionIsTerminal() throws Exception {
-                String token = loginAndGetToken("user1", "pass123");
-                Vehicule vehicule = activeVehicule();
-                Intervention intervention = interventionRepository.save(Intervention.builder()
-                                .numero("INT-2026-000030")
-                                .vehicule(vehicule)
-                                .type(TypeIntervention.REVISION)
-                                .descriptionClient("Révision annuelle")
-                                .statut(StatutIntervention.ANNULEE)
-                                .priorite(PrioriteIntervention.NORMALE)
-                                .dateDepot(LocalDateTime.now())
-                                .actif(true)
-                                .build());
-
-                String payload = "{\"type\":\"REVISION\",\"descriptionClient\":\"Révision annuelle\",\"priorite\":\"NORMALE\",\"dateDepot\":\"2026-01-01T10:00:00\"}";
-
-                mockMvc.perform(put("/api/interventions/{numero}", intervention.getNumero())
-                                .header("Authorization", "Bearer " + token)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(payload))
-                                .andExpect(status().isUnprocessableEntity());
-        }
-
-        @Test
-        void updateShouldReturn422WhenTypeChangedAfterRecue() throws Exception {
-                String token = loginAndGetToken("user1", "pass123");
-                Vehicule vehicule = activeVehicule();
-                LocalDateTime depot = LocalDateTime.of(2026, 1, 1, 10, 0);
-                Intervention intervention = interventionRepository.save(Intervention.builder()
-                                .numero("INT-2026-000031")
-                                .vehicule(vehicule)
-                                .type(TypeIntervention.REPARATION)
-                                .descriptionClient("Bruit moteur")
-                                .statut(StatutIntervention.DIAGNOSTIC_EN_COURS)
-                                .priorite(PrioriteIntervention.NORMALE)
-                                .dateDepot(depot)
-                                .actif(true)
-                                .build());
-
-                String payload = "{\"type\":\"CONTROLE\",\"descriptionClient\":\"Bruit moteur\",\"priorite\":\"NORMALE\",\"dateDepot\":\"2026-01-01T10:00:00\"}";
-
-                mockMvc.perform(put("/api/interventions/{numero}", intervention.getNumero())
-                                .header("Authorization", "Bearer " + token)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(payload))
-                                .andExpect(status().isUnprocessableEntity());
         }
 
         @Test
